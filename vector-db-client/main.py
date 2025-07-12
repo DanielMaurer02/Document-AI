@@ -54,6 +54,7 @@ class DocumentAI:
         """
         self.persistent_client.delete_collection(collection_name)
 
+    #TODO: Recognize duplicates, in a first step by hashing the content and in a second step by setting a threshold for similarity
     def add_documents(self, file_path: str | list[str]) -> None:
         """Add documents to the vectorstore.
         
