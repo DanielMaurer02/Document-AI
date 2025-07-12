@@ -86,7 +86,6 @@ host = os.getenv("CHROMA_HOST", "localhost")
 doc_ai = DocumentAI(host=host)
 #doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
 #doc_ai.add_documents(file_path)
-#query = "Hi, welche Note hatte ich für meine Bachelorarbeit? Kannst du außerdem noch sage, wie alt ich war, als ich mein Bachelorzeugnis erhalten habe?"
 while True:
     query = input("Enter your query (or 'exit' to quit): ")
     if query.lower() == 'exit':
