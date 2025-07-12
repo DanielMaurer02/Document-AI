@@ -4,16 +4,13 @@ from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 
 
-def add_documents_to_chromadb(file_path: str | list[str], vectorstore: Chroma):
-    """
-    Add documents to ChromaDB with metadata including file paths.
+def add_documents_to_chromadb(file_path: str | list[str], vectorstore: Chroma) -> None:
+    """Add documents to ChromaDB with metadata including file paths.
     
     Args:
-        file_path: Path to the file(s) to convert and add
-        vectorstore: ChromaDB vectorstore instance
-    
-    Returns:
-        Chroma: Updated vectorstore
+        file_path (str | list[str]): Path to a single file or list of paths to multiple files
+            to convert and add to the vectorstore.
+        vectorstore (Chroma): ChromaDB vectorstore instance where documents will be added.
     """
     documents = convert_document(file_path)
     
@@ -28,4 +25,3 @@ def add_documents_to_chromadb(file_path: str | list[str], vectorstore: Chroma):
     )
     
     print(f"Added {len(documents)} document chunks with metadata to the vectorstore")
-    return vectorstore

@@ -3,6 +3,17 @@ from langchain_core.documents import Document as LCDocument
 from typing import Optional
 
 def split_markdown_text(doc_text: str, metadata: Optional[dict] = None) -> list[LCDocument]:
+    """Split markdown text into chunks and create LangChain Document objects.
+    
+    Args:
+        doc_text (str): The markdown text to be split into chunks.
+        metadata (Optional[dict]): Optional metadata dictionary to be included
+            with each document chunk. Defaults to None.
+            
+    Returns:
+        list[LCDocument]: A list of LangChain Document objects, each containing
+            a text chunk and associated metadata including chunk index and ID.
+    """
     mD_splitter = MarkdownTextSplitter()
     md_split = mD_splitter.split_text(doc_text)
     

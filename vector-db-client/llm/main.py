@@ -4,9 +4,13 @@ from getpass import getpass
 
 ## Groq LLM
 from langchain_groq import ChatGroq
-def get_groq_llm():
+def get_llm():
+    """Create and return a Groq LLM instance with specified parameters.
     """
-    Returns a Groq LLM instance with specified parameters.
+    return get_groq_llm()
+
+def get_groq_llm():
+    """Create and return a Groq LLM instance with specified parameters.
     """
     return ChatGroq(model="meta-llama/llama-4-scout-17b-16e-instruct",
                     temperature=0,
