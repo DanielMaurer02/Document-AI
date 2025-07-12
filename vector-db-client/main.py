@@ -77,7 +77,7 @@ class DocumentAI:
 file_path = ["/Users/danie/Downloads/Rechnung-Herman-Miller-Chairgo.pdf","/Users/danie/Downloads/20240930 DHBW Zeugnis Daniel Maurer .pdf"]
 doc_ai = DocumentAI()
 #doc_ai.add_documents(file_path)
-query = "Wie schwer darf ich maximal für meinen Bürostuhl werden?"
+query = "Ich habe mir vor kurzem einen Bürostuhl gekauft. Welche Körpergröße darf ich für den Stuhl maximal haben? Außerdem würde ich gerne wissen welches Datum heute ist."
 
 result = doc_ai.query(query)
 print(f"Query Result: {result}")

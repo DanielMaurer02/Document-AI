@@ -9,6 +9,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMListwiseRerank
 from langchain_huggingface import HuggingFaceEmbeddings
 
+import datetime
 from llm.main import get_llm
 
 
@@ -54,26 +55,22 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: HuggingFaceEmbeddi
 
     retriver = vectorstore.as_retriever(search_type="similarity",search_kwargs={"k":5})
 
-
+    current_date = datetime.datetime.now().strftime("%Y-%m-%d")
     prompt = PromptTemplate.from_template(
         "Context information is below. Each piece of context includes source information in brackets.\n"
         "---------------------\n{context}\n---------------------\n"
         "Given the context information and not prior knowledge, answer the query. "
+        "Only include relevant information from the context."
+        f"The current Date and Time is {current_date}. You don't need to state where it was found.\n"
         "If relevant, please include the source file path(s) where the information was found and place that information at the bottom.\n"
-        "Always use markdown formatting for the answer.\n"
+        "Use markdown formatting for the answer.\n"
+        "Directly answer the question without using a heading like Answer\n"
         "Query: {question}\nAnswer:\n"
     )
 
     compressor = LLMListwiseRerank.from_llm(llm=groq_llm)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriver)
     
-    docs = retriver.invoke(query)
-    print(f"Base retriever returned {len(docs)} docs")
-
-    compressed_docs = compression_retriever.invoke(query)
-    print(f"Compression retriever returned {len(compressed_docs)} docs")
-
-
     rag_chain_compressor = (
         {"context": compression_retriever | format_docs, "question": RunnablePassthrough()}
         | prompt

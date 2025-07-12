@@ -1,6 +1,5 @@
 from langchain_chroma import Chroma
 from document_conversion.main import convert_document
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
 
 
 
