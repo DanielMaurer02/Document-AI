@@ -1,6 +1,6 @@
 # Document AI
 
-A powerful document AI system that combines ChromaDB vector database with advanced language models to provide intelligent document retrieval and question-answering capabilities. The system uses Docling for document conversion, HuggingFace embeddings for semantic search, and Groq LLMs for generating responses.
+A powerful document AI system that combines ChromaDB vector database with advanced language models to provide intelligent document retrieval and question-answering capabilities. The system uses Docling for document conversion, Alibaba embeddings for semantic search, and Qwen LLMs for generating responses.
 
 ## Features
 
@@ -9,7 +9,7 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - **RAG (Retrieval-Augmented Generation)**: Combines document retrieval with LLM responses for accurate, context-aware answers
 - **Document Compression**: Uses LLM-based reranking for improved retrieval quality
 - **Source Attribution**: Provides source file paths and chunk information for transparency
-- **Multilingual Support**: Uses `intfloat/multilingual-e5-large-instruct` embeddings for multiple languages
+- **Multilingual Support**: Uses `text-embedding-v3` embeddings for multiple languages
 
 ## Architecture
 
@@ -52,7 +52,7 @@ LLM_SERVICE=qwen        # Options: "groq", "qwen"
 
 # Model names (required for all providers)
 EMBEDDING_MODEL_NAME=text-embedding-v3          # For Alibaba: "text-embedding-v3", for HuggingFace: "intfloat/multilingual-e5-large-instruct"
-LLM_MODEL_NAME=qwen3-30b-a3b                    # For Alibaba: "qwen3-30b-a3b", for Groq: "meta-llama/llama-4-maverick-17b-128e-instruct"
+LLM_MODEL_NAME=qwen3-32b                    # For Alibaba: "qwen3-32b", for Groq: "meta-llama/llama-4-maverick-17b-128e-instruct"
 
 # General settings
 TOKENIZERS_PARALLELISM=false
@@ -83,7 +83,7 @@ GROQ_API_KEY=your_groq_api_key_here
 EMBEDDING_SERVICE=alibaba
 LLM_SERVICE=qwen
 EMBEDDING_MODEL_NAME=text-embedding-v3
-LLM_MODEL_NAME=qwen3-30b-a3b
+LLM_MODEL_NAME=qwen3-32b
 DASHSCOPE_API_KEY=your_dashscope_api_key_here
 TOKENIZERS_PARALLELISM=false
 ```
@@ -101,7 +101,7 @@ TOKENIZERS_PARALLELISM=false
 
 **Available Models:**
 - **Groq LLM Models**: `meta-llama/llama-4-scout-17b-16e-instruct`, `meta-llama/llama-4-maverick-17b-128e-instruct`, etc.
-- **Alibaba LLM Models**: `qwen3-30b-a3b`, etc.
+- **Alibaba LLM Models**: `qwen3-32b`, etc.
 - **HuggingFace Embedding Models**: `intfloat/multilingual-e5-large-instruct`, etc.
 - **Alibaba Embedding Models**: `text-embedding-v3`, etc.
 

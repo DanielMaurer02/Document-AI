@@ -40,6 +40,6 @@ class LLM():
     def get_qwen_llm(self):
         """Create and return a Qwen LLM instance with specified parameters.
         """
-        self.model_name = "qwen3-30b-a3b" if self.model_name is None else self.model_name
+        self.model_name = "qwen3-32b" if self.model_name is None else self.model_name
         print("Using Qwen LLM with model:", self.model_name)
         return ChatQwen(model=self.model_name)

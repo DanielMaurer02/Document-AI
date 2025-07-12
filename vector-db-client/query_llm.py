@@ -16,7 +16,7 @@ from utils.thinking_animation import ThinkingAnimation
 
 load_dotenv()
 LLM_SERVICE = os.getenv('LLM_SERVICE', 'qwen')
-LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'qwen3-30b-a3b')
+LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'qwen3-32b')
 
 
 

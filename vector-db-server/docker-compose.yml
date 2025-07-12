@@ -28,23 +28,23 @@ services:
       - otel-collector
       - zipkin
 
-  document-ai:
-    build:
-      context: ../vector-db-client
-    environment:
-      - EMBEDDING_SERVICE=alibaba
-      - LLM_SERVICE=qwen
-      - DASHSCOPE_API_KEY=KEY
-      #- HUGGINGFACE_API_KEY=KEY
-      #- GROQ_API_KEY=KEY
-      - EMBEDDING_MODEL_NAME=text-embedding-v3
-      - LLM_MODEL_NAME=qwen3-32b
+  #document-ai:
+  #  build:
+  #    context: ../vector-db-client
+  #  environment:
+  #    - EMBEDDING_SERVICE=alibaba
+  #    - LLM_SERVICE=qwen
+  #    - DASHSCOPE_API_KEY=KEY
+  #    #- HUGGINGFACE_API_KEY=KEY
+  #    #- GROQ_API_KEY=KEY
+  #    - EMBEDDING_MODEL_NAME=text-embedding-v3
+  #    - LLM_MODEL_NAME=qwen3-32b
 
-      - CHROMA_HOST=server
-    networks:
-      - internal
-    depends_on:
-      - server
+  #    - CHROMA_HOST=server
+  #  networks:
+  #    - internal
+  #  depends_on:
+  #    - server
 
 networks:
   internal:
