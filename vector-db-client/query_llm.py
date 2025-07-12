@@ -67,9 +67,12 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: Embeddings) -> str
     prompt = PromptTemplate.from_template(
         "Context information is below. Each piece of context includes source information in brackets.\n"
         "---------------------\n{context}\n---------------------\n"
-        "Given the context information and not prior knowledge, answer the query. "
-        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. You don't have to include the corresponding chunk_id because the file_path is enough."
-        "Only include relevant information from the context.\n"
+        "If you find the context to be relevant, use it to answer the question."
+        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. Don't include the corresponding chunk_id."
+        "Only give the source file paths for information that you got from the context, not for information that you already know. Never state that you didn't find sources for non context information.\n"
+        "Only include relevant information from the context."
+        "If context is used mark the information you used with a number in brackets e.g. [1], [2], place it behind the line where the information was found and place the source file path(s) at the bottom of the answer.\n"
+        "If no context information is relevant, don't mention it, if you are not specifically asked to do so.\n"
         "Never answer with one word or a single sentence if you are not specifically asked to do so.\n"
         "If you are asked a question in a specific language, always answer in that language.\n"
         f"The current Date and Time is {current_date}. You don't need to state where it was found.\n"
@@ -77,18 +80,32 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: Embeddings) -> str
         "Query: {question}\nAnswer:\n"
     )
 
-    compressor = LLMListwiseRerank.from_llm(llm=llm)
-    compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriver)
-    
-    rag_chain_compressor = (
-        {"context": compression_retriever | format_docs, "question": RunnablePassthrough()}
-        | prompt
-        | llm 
-        | StrOutputParser()
-    )
 
-    # Use thinking animation while waiting for LLM response
-    with ThinkingAnimation("Thinking"):
-        result = rag_chain_compressor.invoke(query)
+    
+    try:
+        compressor = LLMListwiseRerank.from_llm(llm=llm)
+        compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriver)
+        
+        rag_chain = (
+            {"context": compression_retriever | format_docs, "question": RunnablePassthrough()}
+            | prompt
+            | llm 
+            | StrOutputParser()
+        )
+        # Execute the RAG chain with thinking animation
+        with ThinkingAnimation("Thinking"):
+            result = rag_chain.invoke(query)
+    except AttributeError as e:
+        print("No relevant context found for the query. Using standard retrieval without compression.")
+        rag_chain = (
+            {"context": retriver | format_docs, "question": RunnablePassthrough()}
+            | prompt
+            | llm 
+            | StrOutputParser()
+        )
+        # Execute the RAG chain with thinking animation
+        with ThinkingAnimation("Thinking"):
+            result = rag_chain.invoke(query)
+    
     
     return result

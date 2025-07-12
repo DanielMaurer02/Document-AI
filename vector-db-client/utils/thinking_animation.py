@@ -19,11 +19,11 @@ class ThinkingAnimation:
             sys.stdout.write(f"\r{self.message}{self.dots[self.current_dot_index]}")
             sys.stdout.flush()
             
-            # Move to next dot state
-            self.current_dot_index = (self.current_dot_index + 1) % len(self.dots)
-            
             # Wait before next animation frame
             time.sleep(0.5)
+            
+            # Move to next dot state
+            self.current_dot_index = (self.current_dot_index + 1) % len(self.dots)
     
     def start(self):
         """Start the thinking animation."""
