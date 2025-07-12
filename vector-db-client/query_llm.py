@@ -1,5 +1,6 @@
 from typing import Iterable
-
+import os
+from dotenv import load_dotenv
 from langchain_chroma import Chroma
 from langchain_core.documents import Document as LCDocument
 from langchain_core.output_parsers import StrOutputParser
@@ -7,10 +8,13 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMListwiseRerank
-from langchain_huggingface import HuggingFaceEmbeddings
+from langchain_core.embeddings import Embeddings
 
 import datetime
-from llm.main import get_llm
+from llm.model import LLMProvider,LLM
+
+load_dotenv()
+LLM_MODEL = os.getenv('LLM_MODEL', 'qwen3-30b-a3b')
 
 
 
@@ -40,7 +44,7 @@ def format_docs(docs: Iterable[LCDocument]):
     
     return "\n\n".join(formatted_docs)
 
-def invoke_query(query: str, vectorstore: Chroma, embeddings: HuggingFaceEmbeddings) -> str:
+def invoke_query(query: str, vectorstore: Chroma, embeddings: Embeddings) -> str:
     """Execute a query using retrieval-augmented generation (RAG) with document compression.
     
     Args:
@@ -51,30 +55,32 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: HuggingFaceEmbeddi
     Returns:
         str: The LLM's response based on the retrieved and compressed documents.
     """
-    groq_llm = get_llm()
+    llmProvider = LLM(LLMProvider.QWEN, LLM_MODEL)
+    llm = llmProvider.get_llm()
 
-    retriver = vectorstore.as_retriever(search_type="similarity",search_kwargs={"k":5})
+    retriver = vectorstore.as_retriever(search_type="similarity",search_kwargs={"k":7})
 
     current_date = datetime.datetime.now().strftime("%Y-%m-%d")
     prompt = PromptTemplate.from_template(
         "Context information is below. Each piece of context includes source information in brackets.\n"
         "---------------------\n{context}\n---------------------\n"
         "Given the context information and not prior knowledge, answer the query. "
-        "Only include relevant information from the context."
+        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. You don't have to include the corresponding chunk_id because the file_path is enough."
+        "Only include relevant information from the context.\n"
+        "Never answer with one word or a single sentence if you are not specifically asked to do so.\n"
+        "If you are asked a question in a specific language, always answer in that language.\n"
         f"The current Date and Time is {current_date}. You don't need to state where it was found.\n"
-        "If relevant, please include the source file path(s) where the information was found and place that information at the bottom.\n"
         "Use markdown formatting for the answer.\n"
-        "Directly answer the question without using a heading like Answer\n"
         "Query: {question}\nAnswer:\n"
     )
 
-    compressor = LLMListwiseRerank.from_llm(llm=groq_llm)
+    compressor = LLMListwiseRerank.from_llm(llm=llm)
     compression_retriever = ContextualCompressionRetriever(base_compressor=compressor, base_retriever=retriver)
     
     rag_chain_compressor = (
         {"context": compression_retriever | format_docs, "question": RunnablePassthrough()}
         | prompt
-        | groq_llm 
+        | llm 
         | StrOutputParser()
     )
 

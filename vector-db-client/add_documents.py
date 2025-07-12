@@ -1,5 +1,5 @@
 from langchain_chroma import Chroma
-from document_conversion.main import convert_document
+from document_conversion.convert_documents import convert_documents
 
 
 
@@ -11,7 +11,7 @@ def add_documents_to_chromadb(file_path: str | list[str], vectorstore: Chroma) -
             to convert and add to the vectorstore.
         vectorstore (Chroma): ChromaDB vectorstore instance where documents will be added.
     """
-    documents = convert_document(file_path)
+    documents = convert_documents(file_path)
     
     # Extract texts and metadata from Document objects
     texts = [doc.page_content for doc in documents]

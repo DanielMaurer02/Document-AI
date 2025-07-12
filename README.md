@@ -39,23 +39,51 @@ This will start:
 - Zipkin for tracing on port 9411
 - OpenTelemetry collector for observability
 
+
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the `vector-db-client` folder with the following variables:
+Create a `.env` file in the `vector-db-client` folder with the following variables, depending on your embedding and LLM provider choices:
 
+#### Required for All Setups
 ```env
-HUGGINGFACE_API_KEY=your_huggingface_token_here
-GROQ_API_KEY=your_groq_api_key_here
-GROQ_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+# Name of the embedding model to use (required for all providers)
+EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large-instruct
+# Name of the LLM model to use (required for all providers)
+LLM_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
 TOKENIZERS_PARALLELISM=false
 ```
 
-**Note about HuggingFace API Key**: You don't need a paid HuggingFace account. The key is only used to download the embedding model (`intfloat/multilingual-e5-large-instruct`). You can get a free token from [HuggingFace](https://huggingface.co/settings/tokens).
+#### If Using HuggingFace for Embeddings
+```env
+HUGGINGFACE_API_KEY=your_huggingface_token_here
+```
+*You do not need a paid HuggingFace account. The key is only used to download the embedding model. Get a free token from [HuggingFace](https://huggingface.co/settings/tokens).*
 
-**Available GROQ Models**: You can change the `GROQ_MODEL` to use different models available on Groq, such as:
-- `meta-llama/llama-4-scout-17b-16e-instruct` (default)
-- `meta-llama/llama-4-maverick-17b-128e-instruct`
-- Other Groq-supported models
+#### If Using Alibaba for Embeddings or LLM
+```env
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
+```
+
+#### If Using Groq for LLM
+```env
+GROQ_API_KEY=your_groq_api_key_here
+```
+
+**Model Selection:**
+- For Groq, set `LLM_MODEL` to one of the supported Groq models, e.g.:
+  - `meta-llama/llama-4-scout-17b-16e-instruct` (default)
+  - `meta-llama/llama-4-maverick-17b-128e-instruct`
+  - ...or any other Groq-supported model
+- For Alibaba, set `LLM_MODEL` to the desired DashScope model, e.g. `qwen3-30b-a3b`.
+
+**Summary Table:**
+
+| Provider         | Required Variables                |
+|------------------|-----------------------------------|
+| HuggingFace      | HUGGINGFACE_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL |
+| Alibaba          | DASHSCOPE_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL   |
+| Groq             | GROQ_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL        |
+
 
 ### 3. Install Dependencies
 

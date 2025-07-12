@@ -1,14 +1,15 @@
-import  os
+import os
 
-from dotenv import load_dotenv
 import chromadb
 from langchain_chroma import Chroma
-from langchain_huggingface.embeddings import HuggingFaceEmbeddings
+from embedding.embeddings import Embedding_Service, EmbeddingProvider
+from langchain_core.embeddings import Embeddings
 from add_documents import add_documents_to_chromadb
 from query_llm import invoke_query
 import time
 
-load_dotenv()
+
+
 
 class DocumentAI:
     """A Document AI class for managing vector databases and document retrieval.
@@ -23,7 +24,7 @@ class DocumentAI:
         self.vectorstore, self.embeddings = self.__get_vectorstore(collection_name)
         print(f"DocumentAI initialized in {time.time() - start_time:.2f} seconds")
 
-    def __get_vectorstore(self, collection_name: str) -> tuple[Chroma, HuggingFaceEmbeddings]:
+    def __get_vectorstore(self, collection_name: str) -> tuple[Chroma, Embeddings]:
         """Create and configure a ChromaDB vectorstore with embeddings.
         
         Args:
@@ -33,9 +34,8 @@ class DocumentAI:
             tuple[Chroma, HuggingFaceEmbeddings]: A tuple containing the vectorstore instance
                 and the embeddings model.
         """
-        HF_EMBED_MODEL_ID = "intfloat/multilingual-e5-large-instruct"
-        embeddings = HuggingFaceEmbeddings(model_name=HF_EMBED_MODEL_ID)
-
+        embedding_service = Embedding_Service(EmbeddingProvider.ALIBABA)
+        embeddings = embedding_service.get_embeddings()
         vectorstore = Chroma(
             collection_name=collection_name,
             embedding_function=embeddings,
@@ -77,11 +77,12 @@ class DocumentAI:
         return result
 
 
-file_path = [r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf",r"c:\Users\danie\Downloads\23-10-21-ETV_DB_Systel_-_unterzeichnet.pdf"]
+file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf",r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf"]
 host = os.getenv("CHROMA_HOST", "localhost")
 doc_ai = DocumentAI(host=host)
-#doc_ai.add_documents(file_path)
-query = "Kannst du in meinem Gewerkschaftsvertrag der EVG nachsehen,  wie viel Geld ich erhalte, wenn ich von Tarifgruppe 4 in Tarifgruppe 5 aufsteige? Ich arbeite 100% also nur mit den 30 Urlaubstagen."
+#doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
+doc_ai.add_documents(file_path)
+query = "Hi, welche Note hatte ich für meine Bachelorarbeit? Kannst du außerdem noch sage, wie alt ich war, als ich mein Bachelorzeugnis erhalten habe?"
 
-result = doc_ai.query(query)
-print(f"Query Result: {result}")
+#result = doc_ai.query(query)
+#print(f"Query Result: {result}")
