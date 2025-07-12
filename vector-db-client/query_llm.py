@@ -12,9 +12,11 @@ from langchain_core.embeddings import Embeddings
 
 import datetime
 from llm.model import LLMProvider,LLM
+from utils.thinking_animation import ThinkingAnimation
 
 load_dotenv()
-LLM_MODEL = os.getenv('LLM_MODEL', 'qwen3-30b-a3b')
+LLM_SERVICE = os.getenv('LLM_SERVICE', 'qwen')
+LLM_MODEL_NAME = os.getenv('LLM_MODEL_NAME', 'qwen3-30b-a3b')
 
 
 
@@ -55,8 +57,9 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: Embeddings) -> str
     Returns:
         str: The LLM's response based on the retrieved and compressed documents.
     """
-    llmProvider = LLM(LLMProvider.QWEN, LLM_MODEL)
-    llm = llmProvider.get_llm()
+    llmProvider = LLMProvider(LLM_SERVICE.lower())
+    llmService = LLM(llmProvider, LLM_MODEL_NAME)
+    llm = llmService.get_llm()
 
     retriver = vectorstore.as_retriever(search_type="similarity",search_kwargs={"k":7})
 
@@ -84,4 +87,8 @@ def invoke_query(query: str, vectorstore: Chroma, embeddings: Embeddings) -> str
         | StrOutputParser()
     )
 
-    return rag_chain_compressor.invoke(query)
+    # Use thinking animation while waiting for LLM response
+    with ThinkingAnimation("Thinking"):
+        result = rag_chain_compressor.invoke(query)
+    
+    return result

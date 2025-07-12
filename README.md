@@ -21,7 +21,7 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - Docker and Docker Compose
 - Python 3.13+
 - [uv](https://github.com/astral-sh/uv) (recommended for fast Python dependency management)
-- API keys for Groq and HuggingFace
+- API keys for your chosen providers (HuggingFace, Alibaba DashScope, and/or Groq)
 
 ## Quick Start
 
@@ -42,47 +42,68 @@ This will start:
 
 ### 2. Configure Environment Variables
 
-Create a `.env` file in the `vector-db-client` folder with the following variables, depending on your embedding and LLM provider choices:
+Create a `.env` file in the `vector-db-client` folder with the following variables:
 
 #### Required for All Setups
 ```env
-# Name of the embedding model to use (required for all providers)
-EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large-instruct
-# Name of the LLM model to use (required for all providers)
-LLM_MODEL=meta-llama/llama-4-scout-17b-16e-instruct
+# Service providers (required)
+EMBEDDING_SERVICE=alibaba  # Options: "huggingface", "alibaba"
+LLM_SERVICE=qwen        # Options: "groq", "qwen"
+
+# Model names (required for all providers)
+EMBEDDING_MODEL_NAME=text-embedding-v3          # For Alibaba: "text-embedding-v3", for HuggingFace: "intfloat/multilingual-e5-large-instruct"
+LLM_MODEL_NAME=qwen3-30b-a3b                    # For Alibaba: "qwen3-30b-a3b", for Groq: "meta-llama/llama-4-maverick-17b-128e-instruct"
+
+# General settings
 TOKENIZERS_PARALLELISM=false
 ```
 
-#### If Using HuggingFace for Embeddings
+#### Provider-Specific API Keys (add based on your service choices)
+
+**If Using HuggingFace for Embeddings:**
 ```env
 HUGGINGFACE_API_KEY=your_huggingface_token_here
 ```
 *You do not need a paid HuggingFace account. The key is only used to download the embedding model. Get a free token from [HuggingFace](https://huggingface.co/settings/tokens).*
 
-#### If Using Alibaba for Embeddings or LLM
+**If Using Alibaba for Embeddings or LLM:**
 ```env
 DASHSCOPE_API_KEY=your_dashscope_api_key_here
 ```
 
-#### If Using Groq for LLM
+**If Using Groq for LLM:**
 ```env
 GROQ_API_KEY=your_groq_api_key_here
 ```
 
-**Model Selection:**
-- For Groq, set `LLM_MODEL` to one of the supported Groq models, e.g.:
-  - `meta-llama/llama-4-scout-17b-16e-instruct` (default)
-  - `meta-llama/llama-4-maverick-17b-128e-instruct`
-  - ...or any other Groq-supported model
-- For Alibaba, set `LLM_MODEL` to the desired DashScope model, e.g. `qwen3-30b-a3b`.
+#### Example Configurations
 
-**Summary Table:**
+**Configuration 1: Alibaba for both Embedding and LLM (default)**
+```env
+EMBEDDING_SERVICE=alibaba
+LLM_SERVICE=qwen
+EMBEDDING_MODEL_NAME=text-embedding-v3
+LLM_MODEL_NAME=qwen3-30b-a3b
+DASHSCOPE_API_KEY=your_dashscope_api_key_here
+TOKENIZERS_PARALLELISM=false
+```
 
-| Provider         | Required Variables                |
-|------------------|-----------------------------------|
-| HuggingFace      | HUGGINGFACE_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL |
-| Alibaba          | DASHSCOPE_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL   |
-| Groq             | GROQ_API_KEY, EMBEDDING_MODEL_NAME, LLM_MODEL        |
+**Configuration 2: HuggingFace for Embedding, Groq for LLM**
+```env
+EMBEDDING_SERVICE=huggingface
+LLM_SERVICE=groq
+EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large-instruct
+LLM_MODEL_NAME=meta-llama/llama-4-scout-17b-16e-instruct
+HUGGINGFACE_API_KEY=your_huggingface_token_here
+GROQ_API_KEY=your_groq_api_key_here
+TOKENIZERS_PARALLELISM=false
+```
+
+**Available Models:**
+- **Groq LLM Models**: `meta-llama/llama-4-scout-17b-16e-instruct`, `meta-llama/llama-4-maverick-17b-128e-instruct`, etc.
+- **Alibaba LLM Models**: `qwen3-30b-a3b`, etc.
+- **HuggingFace Embedding Models**: `intfloat/multilingual-e5-large-instruct`, etc.
+- **Alibaba Embedding Models**: `text-embedding-v3`, etc.
 
 
 ### 3. Install Dependencies

@@ -1,5 +1,6 @@
 import os
 
+from dotenv import load_dotenv
 import chromadb
 from langchain_chroma import Chroma
 from embedding.embeddings import Embedding_Service, EmbeddingProvider
@@ -8,8 +9,8 @@ from add_documents import add_documents_to_chromadb
 from query_llm import invoke_query
 import time
 
-
-
+load_dotenv()
+EMBEDDING_SERVICE = os.getenv('EMBEDDING_SERVICE', 'alibaba')
 
 class DocumentAI:
     """A Document AI class for managing vector databases and document retrieval.
@@ -34,7 +35,8 @@ class DocumentAI:
             tuple[Chroma, HuggingFaceEmbeddings]: A tuple containing the vectorstore instance
                 and the embeddings model.
         """
-        embedding_service = Embedding_Service(EmbeddingProvider.ALIBABA)
+        provider_service = EmbeddingProvider(EMBEDDING_SERVICE.lower())
+        embedding_service = Embedding_Service(provider_service)
         embeddings = embedding_service.get_embeddings()
         vectorstore = Chroma(
             collection_name=collection_name,
@@ -62,6 +64,8 @@ class DocumentAI:
         add_documents_to_chromadb(file_path, self.vectorstore)
         print(f"Documents added in {time.time() - start_time:.2f} seconds")
 
+
+    # TODO: Save answers from llm for session
     def query(self, query: str) -> str:
         """Execute a query against the vectorstore and return the result.
         
@@ -81,8 +85,11 @@ file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf
 host = os.getenv("CHROMA_HOST", "localhost")
 doc_ai = DocumentAI(host=host)
 #doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
-doc_ai.add_documents(file_path)
-query = "Hi, welche Note hatte ich für meine Bachelorarbeit? Kannst du außerdem noch sage, wie alt ich war, als ich mein Bachelorzeugnis erhalten habe?"
-
-#result = doc_ai.query(query)
-#print(f"Query Result: {result}")
+#doc_ai.add_documents(file_path)
+#query = "Hi, welche Note hatte ich für meine Bachelorarbeit? Kannst du außerdem noch sage, wie alt ich war, als ich mein Bachelorzeugnis erhalten habe?"
+while True:
+    query = input("Enter your query (or 'exit' to quit): ")
+    if query.lower() == 'exit':
+        break
+    result = doc_ai.query(query)
+    print(f"Query Result: {result}")
