@@ -132,6 +132,21 @@ environment:
 
 There are several ways to add documents to the system:
 
+#### Duplicate Detection
+
+The system now automatically detects duplicate documents using BLAKE2b file hashing before processing and embedding. This prevents:
+- Wasting computational resources on re-processing the same files
+- Creating duplicate embeddings that could skew search results
+- Unnecessary storage usage
+
+**How it works:**
+1. Before processing any document, the system calculates a BLAKE2b hash of the file
+2. It checks ChromaDB metadata to see if any document with that hash already exists
+3. If found, the document is skipped with a log message
+4. If not found, the document is processed and the hash is stored in the metadata for future checks
+
+**Force Re-adding:** If you need to re-process a document (e.g., after changing embedding models), you can use the `force_readd=True` parameter.
+
 #### Method 1: Using the Python API (for developers)
 
 The main interface is the `DocumentAI` class in `ai_service/main.py`:
@@ -142,12 +157,15 @@ from ai_service.main import DocumentAI
 # Initialize the Document AI system
 doc_ai = DocumentAI(host="server")  # "server" is the ChromaDB service name
 
-# Add documents to the vector database
+# Add documents to the vector database (with automatic duplicate detection)
 file_paths = [
     "/path/to/your/document1.pdf",
     "/path/to/your/document2.pdf"
 ]
 doc_ai.add_documents(file_paths)
+
+# Force re-add documents even if they already exist
+doc_ai.add_documents(file_paths, force_readd=True)
 
 # Query the documents
 query = "What information can you find about...?"
@@ -176,12 +194,15 @@ doc_ai.add_documents(['/app/documents/document.pdf'])
 #### `__init__(host="localhost", port=8008, collection_name="rag")`
 Initialize the DocumentAI instance with ChromaDB connection parameters.
 
-#### `add_documents(file_path: str | list[str])`
-Add one or more PDF documents to the vector database. Documents are:
-1. Converted to markdown using Docling
-2. Split into semantic chunks
-3. Embedded using multilingual embeddings
-4. Stored in ChromaDB with metadata
+#### `add_documents(file_path: str | list[str], force_readd: bool = False)`
+Add one or more PDF documents to the vector database with automatic duplicate detection. Documents are:
+1. Checked for duplicates using BLAKE2b file hashing
+2. Skipped if already processed (unless `force_readd=True`)
+3. Converted to markdown using Docling
+4. Split into semantic chunks
+5. Embedded using multilingual embeddings
+6. Stored in ChromaDB with metadata including file hash
+
 
 #### `query(query: str) -> str`
 Execute a query against the document collection:

@@ -9,6 +9,7 @@ from langchain_chroma import Chroma
 from .embedding.embeddings import Embedding_Service, EmbeddingProvider
 from .add_documents import add_documents_to_chromadb
 from .query_llm import invoke_query, invoke_query_stream
+from .utils.hash_file import blake2b_file
 import time
 import logging
 
@@ -66,18 +67,51 @@ class DocumentAI:
         """
         self.persistent_client.delete_collection(collection_name)
 
-    # TODO: Recognize duplicates, in a first step by hashing the content and in a second step by setting a threshold for similarity
-    def add_documents(self, file_path: str | list[str]) -> None:
-        """Add documents to the vectorstore.
+    # TODO: Add similarity-based duplicate detection as a second step (hash-based detection implemented)
+    def add_documents(
+        self, file_path: str | list[str], force_readd: bool = False
+    ) -> None:
+        """Add documents to the vectorstore with duplicate detection.
+
+        Args:
+            file_path (str | list[str]): Path to a single document or list of paths to multiple documents.
+            force_readd (bool): If True, will re-add documents even if they already exist. Defaults to False.
+        """
+        start_time = time.time()
+
+        if force_readd:
+            # Remove existing documents with same hash before adding
+            self._remove_duplicate_documents(file_path)
+
+        add_documents_to_chromadb(file_path, self.vectorstore)
+        logging.info(f"Documents processed in {time.time() - start_time:.2f} seconds")
+
+    def _remove_duplicate_documents(self, file_path: str | list[str]) -> None:
+        """Remove documents from vectorstore that have the same hash as the provided files.
 
         Args:
             file_path (str | list[str]): Path to a single document or list of paths to multiple documents.
         """
-        start_time = time.time()
-        add_documents_to_chromadb(file_path, self.vectorstore)
-        logging.info(f"Documents added in {time.time() - start_time:.2f} seconds")
 
-    # TODO: Save answers from llm for session
+        if isinstance(file_path, str):
+            file_paths = [file_path]
+        else:
+            file_paths = file_path
+
+        for fp in file_paths:
+            file_hash = blake2b_file(fp)
+            try:
+                # Find documents with this hash
+                results = self.vectorstore.get(where={"file_hash": file_hash})
+                if results["ids"]:
+                    # Delete existing documents with this hash
+                    self.vectorstore.delete(ids=results["ids"])
+                    logging.info(
+                        f"Removed {len(results['ids'])} existing chunks for file: {fp}"
+                    )
+            except Exception as e:
+                logging.warning(f"Error removing duplicate document {fp}: {e}")
+
     def query(self, query: str) -> str:
         """Execute a query against the vectorstore and return the result.
 
@@ -108,15 +142,3 @@ class DocumentAI:
             logging.info(
                 f"Query streaming execution time: {time.time() - start_time:.2f} seconds"
             )
-
-
-# file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf",r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf"]
-# doc_ai = DocumentAI("rag")
-# doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
-# doc_ai.add_documents(file_path)
-# while True:
-#    query = input("Enter your query (or 'exit' to quit): ")
-#    if query.lower() == 'exit':
-#        break
-#    result = doc_ai.query(query)
-#    print(f"Query Result: {result}")

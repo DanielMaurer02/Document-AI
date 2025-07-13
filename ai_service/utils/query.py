@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
 
-from ...llm.model import LLMProvider, LLM
+from ..llm.model import LLMProvider, LLM
 import datetime
 from typing import Iterable
 
