@@ -13,5 +13,3 @@ repos:
     hooks:
       - id: trailing-whitespace
       - id: check-added-large-files
-      - id: pretty-format-json
-        args: [--autofix]
