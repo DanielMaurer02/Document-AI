@@ -30,7 +30,6 @@ jobs:
       - name: Build and Push Document AI Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
           push: true
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/document-ai-api:latest
