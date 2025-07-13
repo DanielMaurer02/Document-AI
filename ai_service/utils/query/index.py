@@ -130,6 +130,6 @@ def process_chunk(chunk: BaseMessage) -> str:
 
     # Only return non-empty strings
     if content and isinstance(content, str) and content.strip():
-        logging.info(f"Processed chunk content: {content}")
+        logging.debug(f"Processed chunk content: {content}")
         return content
     return ""
