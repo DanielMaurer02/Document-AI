@@ -27,5 +27,13 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/document-ai-api:latest
             ${{ secrets.DOCKER_USERNAME }}/document-ai-api:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=document-ai-api
+          cache-to: type=gha,mode=min,scope=document-ai-api
+          outputs: type=docker,dest=/tmp/image.tar
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: document-ai-api-image
+          path: /tmp/image.tar
+
