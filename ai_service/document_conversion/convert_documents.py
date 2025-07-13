@@ -1,5 +1,5 @@
-from document_conversion.docling_pdf_loader import DoclingDocLoader
-from document_conversion.document_splitter import split_markdown_text
+from .docling_pdf_loader import DoclingDocLoader
+from .document_splitter import split_markdown_text
 
 def convert_documents(file_path: str | list[str]) -> list:
     """Convert document(s) to markdown chunks with metadata including file path.

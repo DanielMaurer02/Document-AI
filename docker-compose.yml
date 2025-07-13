@@ -27,10 +27,18 @@ services:
     depends_on:
       - otel-collector
       - zipkin
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:main
+    ports:
+      - "3000:8080"
+    volumes:
+      - open-webui:/app/backend/data
+
+
 
   #document-ai:
   #  build:
-  #    context: ../vector-db-client
+  #    context: ./ai-service
   #  environment:
   #    - EMBEDDING_SERVICE=alibaba
   #    - LLM_SERVICE=qwen
@@ -51,3 +59,5 @@ networks:
 
 volumes:
   chroma_data:
+  open-webui:
+

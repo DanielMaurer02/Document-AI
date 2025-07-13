@@ -3,10 +3,10 @@ import os
 from dotenv import load_dotenv
 import chromadb
 from langchain_chroma import Chroma
-from embedding.embeddings import Embedding_Service, EmbeddingProvider
 from langchain_core.embeddings import Embeddings
-from add_documents import add_documents_to_chromadb
-from query_llm import invoke_query
+from .embedding.embeddings import Embedding_Service, EmbeddingProvider
+from .add_documents import add_documents_to_chromadb
+from .query_llm import invoke_query
 import time
 
 load_dotenv()
@@ -82,14 +82,14 @@ class DocumentAI:
         return result
 
 
-file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf",r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf"]
-host = os.getenv("CHROMA_HOST", "localhost")
-doc_ai = DocumentAI(host=host)
+#file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf",r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf"]
+#host = os.getenv("CHROMA_HOST", "localhost")
+#doc_ai = DocumentAI(host=host)
 #doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
 #doc_ai.add_documents(file_path)
-while True:
-    query = input("Enter your query (or 'exit' to quit): ")
-    if query.lower() == 'exit':
-        break
-    result = doc_ai.query(query)
-    print(f"Query Result: {result}")
+#while True:
+#    query = input("Enter your query (or 'exit' to quit): ")
+#    if query.lower() == 'exit':
+#        break
+#    result = doc_ai.query(query)
+#    print(f"Query Result: {result}")

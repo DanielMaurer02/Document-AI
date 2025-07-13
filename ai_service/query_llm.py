@@ -11,8 +11,8 @@ from langchain.retrievers.document_compressors import LLMListwiseRerank
 from langchain_core.embeddings import Embeddings
 
 import datetime
-from llm.model import LLMProvider,LLM
-from utils.thinking_animation import ThinkingAnimation
+from .llm.model import LLMProvider,LLM
+from .utils.thinking_animation import ThinkingAnimation
 
 load_dotenv()
 LLM_SERVICE = os.getenv('LLM_SERVICE', 'qwen')
