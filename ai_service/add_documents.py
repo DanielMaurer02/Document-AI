@@ -1,7 +1,7 @@
 from langchain_chroma import Chroma
 from .document_conversion.convert_documents import convert_documents
 from .utils.hash_file import blake2b_file
-from .utils.load_file import load_file_from_bucket
+from .utils.load_file import load_file_from_bucket, remove_temp_file
 from .utils.existance_check import check_document_exists
 import logging
 from pathlib import Path
@@ -72,3 +72,8 @@ def add_documents_to_chromadb(
     logging.info(
         f"Added {len(documents)} document chunks from {len(file_paths)} new files to the vectorstore"
     )
+
+    for fp in file_paths:
+        remove_temp_file(fp)
+
+    logging.info("Temporary files removed after processing")
