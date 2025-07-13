@@ -7,125 +7,138 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - **Document Processing**: Supports PDF documents using Docling for high-quality text extraction and conversion to markdown
 - **Vector Search**: Utilizes ChromaDB for efficient similarity search with multilingual embeddings
 - **RAG (Retrieval-Augmented Generation)**: Combines document retrieval with LLM responses for accurate, context-aware answers
+- **Web Interface**: Integrated Open WebUI for easy interaction with the document AI system
+- **API Backend**: Flask-based OpenAI-compatible API for seamless integration
 - **Document Compression**: Uses LLM-based reranking for improved retrieval quality
 - **Source Attribution**: Provides source file paths and chunk information for transparency
 - **Multilingual Support**: Uses `text-embedding-v3` embeddings for multiple languages
 
 ## Architecture
 
-- **vector-db-server**: ChromaDB server with observability features (OpenTelemetry, Zipkin)
-- **vector-db-client**: Python client for document processing and querying
+The system consists of the following services:
+- **ChromaDB Server**: Vector database for document embeddings
+- **Document AI API**: Flask backend providing OpenAI-compatible API
+- **Open WebUI**: Modern web interface for chatting with your documents
+- **Observability Stack**: OpenTelemetry collector and Zipkin for tracing
 
 ## Prerequisites
 
 - Docker and Docker Compose
-- Python 3.13+
-- [uv](https://github.com/astral-sh/uv) (recommended for fast Python dependency management)
-- API keys for your chosen providers (HuggingFace, Alibaba DashScope, and/or Groq)
+- API key for Alibaba DashScope (default configuration)
 
 ## Quick Start
 
-### 1. Start the Vector Database Server
+The entire system can now be started with a single command! No manual environment configuration needed.
 
-Navigate to the `vector-db-server` directory and start ChromaDB:
+### Start the Complete System
+
+#### Step 1: Setup Configuration
+First, copy the user configuration file to create your docker-compose.yml:
 
 ```bash
-cd vector-db-server
+cp docker-compose.user.yml docker-compose.yml
+```
+
+#### Step 2: Start Services
+```bash
 docker-compose up -d
 ```
 
 This will start:
-- ChromaDB server on port 8000
-- Zipkin for tracing on port 9411
+- ChromaDB server on port 8008
+- Document AI API on port 8000
+- Open WebUI on port 3000
+- Zipkin tracing on port 9411
 - OpenTelemetry collector for observability
 
+#### Step 3: Configure WebUI Connection
+1. Open http://localhost:3000 in your browser
+2. In the Open WebUI interface, go to **Settings** (gear icon)
+3. Navigate to **Connections** or **External Connections**
+4. Add a new OpenAI API connection with:
+   - **API Base URL**: `http://localhost:8000`
+   - **API Key**: `not-required` (or leave empty)
+5. Save the configuration
 
-### 2. Configure Environment Variables
+### Access the Application
 
-Create a `.env` file in the `vector-db-client` folder with the following variables:
+Once all services are running and configured, you can:
+- **Chat with your documents**: Use the web interface at http://localhost:3000
+- **View tracing data**: Access Zipkin at http://localhost:9411
+- **API endpoint**: The OpenAI-compatible API is available at http://localhost:8000
 
-#### Required for All Setups
-```env
-# Service providers (required)
-EMBEDDING_SERVICE=alibaba  # Options: "huggingface", "alibaba"
-LLM_SERVICE=qwen        # Options: "groq", "qwen"
+### Configure API Keys
 
-# Model names (required for all providers)
-EMBEDDING_MODEL_NAME=text-embedding-v3          # For Alibaba: "text-embedding-v3", for HuggingFace: "intfloat/multilingual-e5-large-instruct"
-LLM_MODEL_NAME=qwen3-32b                    # For Alibaba: "qwen3-32b", for Groq: "meta-llama/llama-4-maverick-17b-128e-instruct"
+The system is pre-configured to use Alibaba DashScope. You need to update the API key in the docker-compose.user.yml file before copying it:
 
-# General settings
-TOKENIZERS_PARALLELISM=false
+```yaml
+environment:
+  - DASHSCOPE_API_KEY=your_api_key_here  # Replace with your actual API key
 ```
 
-#### Provider-Specific API Keys (add based on your service choices)
+**To get your API key:**
+1. Sign up at [Alibaba Cloud DashScope](https://dashscope.aliyun.com/)
+2. Navigate to API Keys section
+3. Create a new API key
+4. Replace `KEY_DASHSCOPE` in docker-compose.user.yml with your actual key
+5. Copy the file to docker-compose.yml as shown in the setup steps above
 
-**If Using HuggingFace for Embeddings:**
-```env
-HUGGINGFACE_API_KEY=your_huggingface_token_here
-```
-*You do not need a paid HuggingFace account. The key is only used to download the embedding model. Get a free token from [HuggingFace](https://huggingface.co/settings/tokens).*
 
-**If Using Alibaba for Embeddings or LLM:**
-```env
-DASHSCOPE_API_KEY=your_dashscope_api_key_here
-```
+### Alternative Configuration Options
 
-**If Using Groq for LLM:**
-```env
-GROQ_API_KEY=your_groq_api_key_here
-```
+If you want to use different LLM or embedding providers, you can modify the environment variables in the docker-compose.yml file:
 
-#### Example Configurations
+#### Available Service Providers
 
-**Configuration 1: Alibaba for both Embedding and LLM (default)**
-```env
-EMBEDDING_SERVICE=alibaba
-LLM_SERVICE=qwen
-EMBEDDING_MODEL_NAME=text-embedding-v3
-LLM_MODEL_NAME=qwen3-32b
-DASHSCOPE_API_KEY=your_dashscope_api_key_here
-TOKENIZERS_PARALLELISM=false
-```
+**Embedding Services:**
+- `alibaba` (default) - Uses Alibaba's text-embedding-v3
+- `huggingface` - Uses HuggingFace models
 
-**Configuration 2: HuggingFace for Embedding, Groq for LLM**
-```env
-EMBEDDING_SERVICE=huggingface
-LLM_SERVICE=groq
-EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large-instruct
-LLM_MODEL_NAME=meta-llama/llama-4-scout-17b-16e-instruct
-HUGGINGFACE_API_KEY=your_huggingface_token_here
-GROQ_API_KEY=your_groq_api_key_here
-TOKENIZERS_PARALLELISM=false
+**LLM Services:**
+- `qwen` (default) - Alibaba's Qwen models
+- `groq` - Groq's fast inference
+
+#### Example Alternative Configurations
+
+**Configuration 1: HuggingFace + Groq**
+```yaml
+environment:
+  - EMBEDDING_SERVICE=huggingface
+  - LLM_SERVICE=groq
+  - EMBEDDING_MODEL_NAME=intfloat/multilingual-e5-large-instruct
+  - LLM_MODEL_NAME=meta-llama/llama-4-scout-17b-16e-instruct
+  - HUGGINGFACE_API_KEY=your_huggingface_token_here
+  - GROQ_API_KEY=your_groq_api_key_here
 ```
 
 **Available Models:**
-- **Groq LLM Models**: `meta-llama/llama-4-scout-17b-16e-instruct`, `meta-llama/llama-4-maverick-17b-128e-instruct`, etc.
-- **Alibaba LLM Models**: `qwen3-32b`, etc.
-- **HuggingFace Embedding Models**: `intfloat/multilingual-e5-large-instruct`, etc.
-- **Alibaba Embedding Models**: `text-embedding-v3`, etc.
-
-
-### 3. Install Dependencies
-
-Navigate to the `vector-db-client` directory and install dependencies:
-
-```bash
-cd vector-db-client
-uv sync
-```
+- **Groq LLM Models**: `meta-llama/llama-4-scout-17b-16e-instruct`, `meta-llama/llama-4-maverick-17b-128e-instruct`
+- **Alibaba LLM Models**: `qwen3-32b`
+- **HuggingFace Embedding Models**: `intfloat/multilingual-e5-large-instruct`
+- **Alibaba Embedding Models**: `text-embedding-v3`
 
 ## Usage
 
-### Using the DocumentAI Class
+### Using the Web Interface
 
-The main interface is the `DocumentAI` class in `main.py`:
+1. Open http://localhost:3000 in your browser
+2. You'll see the Open WebUI interface
+3. Start chatting with your documents immediately
+4. The system will search through your document collection and provide context-aware responses
+
+### Adding Documents
+
+There are several ways to add documents to the system:
+
+#### Method 1: Using the Python API (for developers)
+
+The main interface is the `DocumentAI` class in `ai_service/main.py`:
 
 ```python
-from main import DocumentAI
+from ai_service.main import DocumentAI
 
 # Initialize the Document AI system
-doc_ai = DocumentAI()
+doc_ai = DocumentAI(host="server")  # "server" is the ChromaDB service name
 
 # Add documents to the vector database
 file_paths = [
@@ -140,9 +153,25 @@ result = doc_ai.query(query)
 print(f"Query Result: {result}")
 ```
 
+#### Method 2: Direct File Upload
+
+You can copy PDF files directly into the running container and process them:
+
+```bash
+# Copy documents to the container
+docker cp /path/to/your/document.pdf document-ai-document-ai-api-1:/app/documents/
+
+# Execute a Python script to add documents
+docker exec -it document-ai-document-ai-api-1 python -c "
+from ai_service.main import DocumentAI
+doc_ai = DocumentAI(host='server')
+doc_ai.add_documents(['/app/documents/document.pdf'])
+"
+```
+
 ### DocumentAI Class Methods
 
-#### `__init__(host="localhost", port=8000, collection_name="rag")`
+#### `__init__(host="localhost", port=8008, collection_name="rag")`
 Initialize the DocumentAI instance with ChromaDB connection parameters.
 
 #### `add_documents(file_path: str | list[str])`
@@ -156,159 +185,178 @@ Add one or more PDF documents to the vector database. Documents are:
 Execute a query against the document collection:
 1. Performs similarity search to find relevant document chunks
 2. Uses LLM-based reranking for improved relevance
-3. Generates a response using the Groq LLM with retrieved context
+3. Generates a response using the LLM with retrieved context
 4. Returns formatted answer with source attribution
 
 #### `delete_collection(collection_name="rag")`
 Delete a collection from ChromaDB (useful for cleanup or reset).
 
-### Example Usage
+## API Endpoints
 
-#### Example Code
+The Flask backend provides an OpenAI-compatible API:
 
-```python
-# Complete example
-from main import DocumentAI
-
-# Initialize
-doc_ai = DocumentAI()
-
-# Add documents
-documents = [
-    "/Users/documents/manual.pdf",
-    "/Users/documents/report.pdf"
-]
-doc_ai.add_documents(documents)
-
-# Query with context
-query = "What are the safety requirements mentioned in the documents?"
-result = doc_ai.query(query)
-print(result)
-```
-
-#### Running the Example
-
-Since `uv` automatically creates and manages a virtual environment, you can run the main script directly:
-
+### Chat Completions
 ```bash
-cd vector-db-client
-uv run main.py
+curl -X POST http://localhost:8000/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [
+      {"role": "user", "content": "What are the main topics in the documents?"}
+    ]
+  }'
 ```
 
-This command will:
-1. Activate the virtual environment created by `uv sync`
-2. Execute the script with all dependencies available
-3. No need to manually activate/deactivate the virtual environment
-
-## Customizing the Prompt
-
-You can customize the prompt template used for queries by modifying the `invoke_query` function in `vector-db-client/query_llm.py`. The current prompt template is defined around line 58:
-
-```python
-prompt = PromptTemplate.from_template(
-    "Context information is below. Each piece of context includes source information in brackets.\n"
-    "---------------------\n{context}\n---------------------\n"
-    "Given the context information and not prior knowledge, answer the query. "
-    "Only include relevant information from the context."
-    f"The current Date and Time is {current_date}. You don't need to state where it was found.\n"
-    "If relevant, please include the source file path(s) where the information was found and place that information at the bottom.\n"
-    "Use markdown formatting for the answer.\n"
-    "Directly answer the question without using a heading like Answer\n"
-    "Query: {question}\nAnswer:\n"
-)
-```
-
-### Prompt Customization Options
-
-You can modify:
-- **System instructions**: Change how the model should behave
-- **Context formatting**: Adjust how retrieved documents are presented
-- **Output format**: Modify the response structure (markdown, plain text, etc.)
-- **Source attribution**: Change how sources are cited
-- **Language instructions**: Add specific language requirements
-
-### Example Custom Prompt
-
-```python
-prompt = PromptTemplate.from_template(
-    "You are a helpful assistant analyzing technical documents.\n"
-    "Context from documents:\n{context}\n"
-    "Based on the above context, provide a detailed answer to: {question}\n"
-    "Requirements:\n"
-    "- Use bullet points for key information\n"
-    "- Include confidence level (High/Medium/Low)\n"
-    "- Cite sources at the end\n"
-    "Answer:"
-)
+### List Models
+```bash
+curl http://localhost:8000/models
 ```
 
 ## Configuration
 
-### ChromaDB Configuration
+### Customizing the System
 
-The vector database uses cosine similarity for embeddings and can be configured in the `__get_vectorstore` method:
+You can customize various aspects by modifying the docker-compose.yml file:
 
-```python
-vectorstore = Chroma(
-    collection_name=collection_name,
-    embedding_function=embeddings,
-    client=self.persistent_client,
-    collection_metadata={"hnsw:space": "cosine"},  # Can be changed to "l2" or "ip"
-)
+#### Port Configuration
+```yaml
+ports:
+  - "3000:8080"  # Change 3000 to your preferred port for Web UI
+  - "8000:8000"  # Change first 8000 to your preferred API port
+  - "8008:8008"  # Change first 8008 to your preferred ChromaDB port
 ```
 
-### Retrieval Configuration
-
-Adjust retrieval parameters in `query_llm.py`:
-
-```python
-# Number of documents to retrieve
-retriver = vectorstore.as_retriever(
-    search_type="similarity",
-    search_kwargs={"k": 5}  # Increase for more context
-)
+#### Model Configuration
+```yaml
+environment:
+  - EMBEDDING_MODEL_NAME=text-embedding-v3
+  - LLM_MODEL_NAME=qwen3-32b
+  # Change these to use different models
 ```
+
+#### ChromaDB Configuration
+The vector database uses cosine similarity for embeddings and is automatically configured for optimal performance.
+
+### Custom Prompt Templates
+
+You can customize the prompt template by modifying `ai_service/query_llm.py`. The current prompt template is optimized for document question-answering with source attribution.
 
 ## Project Structure
 
 ```
 document-ai/
 ├── README.md
-├── vector-db-server/
-│   ├── docker-compose.yml          # ChromaDB server setup
-│   └── otel-collector-config.yaml  # Observability configuration
-└── vector-db-client/
-    ├── main.py                     # Main DocumentAI class
-    ├── add_documents.py            # Document addition logic
-    ├── query_llm.py               # Query processing and LLM interaction
-    ├── .env                       # Environment variables (create this)
-    ├── document_conversion/
-    │   ├── docling_pdf_loader.py  # PDF loading with Docling
-    │   ├── document_splitter.py   # Text chunking
-    │   └── main.py               # Document conversion pipeline
-    └── llm/
-        └── main.py               # LLM configuration (Groq)
+├── docker-compose.yml          # Complete system orchestration
+├── Dockerfile                  # Document AI API container
+├── app.py                     # Flask backend (OpenAI-compatible API)
+├── pyproject.toml             # Python dependencies
+├── ai_service/
+│   ├── main.py                # Main DocumentAI class
+│   ├── add_documents.py       # Document addition logic
+│   ├── query_llm.py          # Query processing and LLM interaction
+│   ├── document_conversion/
+│   │   ├── docling_pdf_loader.py  # PDF loading with Docling
+│   │   ├── document_splitter.py   # Text chunking
+│   │   └── convert_documents.py   # Document conversion pipeline
+│   ├── embedding/
+│   │   ├── alibaba.py         # Alibaba embedding service
+│   │   └── embeddings.py      # Embedding abstraction
+│   ├── llm/
+│   │   └── model.py          # LLM configuration
+│   └── utils/
+│       └── thinking_animation.py
+└── otel-collector-config.yaml # Observability configuration
+```
+
+## Monitoring and Observability
+
+The system includes comprehensive observability features:
+
+### Zipkin Tracing
+- **URL**: http://localhost:9411
+- **Features**: Distributed tracing across all services
+- **Use Cases**: Performance monitoring, debugging, request flow analysis
+
+### OpenTelemetry
+- Automatic instrumentation for ChromaDB operations
+- Custom tracing for document processing and LLM calls
+- Metrics collection for system performance
+
+### Logs
+View real-time logs for all services:
+```bash
+# All services
+docker-compose logs -f
+
+# Specific service
+docker-compose logs -f document-ai-api
+docker-compose logs -f server  # ChromaDB
+docker-compose logs -f openwebui
 ```
 
 ## Troubleshooting
 
 ### Common Issues
 
-1. **ChromaDB Connection Error**: Ensure the vector-db-server is running (`docker-compose up -d`)
+1. **Services not starting**: 
+   ```bash
+   docker-compose down
+   docker-compose up -d --build --force-recreate
+   ```
 
 2. **API Key Issues**: 
-   - Verify your `.env` file is in the `vector-db-client` directory
-   - Check that API keys are valid and have necessary permissions
+   - Verify your API key is correctly set in docker-compose.yml
+   - Check that the API key has necessary permissions
+   - Restart the services after changing the key
 
 3. **Memory Issues with Large Documents**: 
-   - Reduce chunk size in document splitter
-   - Process documents in smaller batches
+   - Monitor container resources: `docker stats`
+   - Consider processing documents in smaller batches
 
-4. **Slow Query Performance**:
-   - Reduce the number of retrieved documents (`k` parameter)
-   - Check ChromaDB server resources
+4. **Connection Issues**:
+   - Check if all ports are available (3000, 8000, 8008, 9411)
+   - Verify no other services are using these ports
 
-### Monitoring
+### Health Checks
 
-Access observability tools:
-- **Zipkin UI**: http://localhost:9411 (distributed tracing)
+Check service status:
+```bash
+# Check all services
+docker-compose ps
+
+# Check specific service health
+curl http://localhost:8000/models  # API health
+curl http://localhost:8008/api/v1/heartbeat  # ChromaDB health
+```
+
+### Performance Optimization
+
+For better performance with large document collections:
+1. Increase ChromaDB memory allocation in docker-compose.yml
+2. Adjust retrieval parameters in the code
+3. Consider using SSD storage for ChromaDB data persistence
+
+## Development
+
+### Local Development Setup
+
+If you want to develop or modify the system:
+
+1. Clone the repository
+2. Modify the code as needed
+3. Rebuild and restart:
+   ```bash
+   docker-compose build
+   docker-compose up -d
+   ```
+
+### Adding New Features
+
+The modular architecture makes it easy to:
+- Add new document types (modify `document_conversion/`)
+- Integrate new LLM providers (modify `llm/`)
+- Add new embedding services (modify `embedding/`)
+- Customize the API (modify `app.py`)
+
+## License
+
+This project is open source. Feel free to contribute and improve the system!

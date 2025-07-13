@@ -4,25 +4,29 @@ from flask_cors import CORS
 from ai_service.main import DocumentAI
 import os
 from dotenv import load_dotenv
-import uuid
 import time
-import uvicorn
+import logging
+import uuid
+
+logging.basicConfig(level=logging.INFO)
+
 
 load_dotenv()
-host = os.getenv("CHROMA_HOST", "localhost")
+chroma_host = os.getenv("CHROMA_HOST", "localhost")
+domain = os.getenv("DOMAIN", "http://localhost:3000")
 
 app = Flask("OpenAI-compatible API")
-CORS(app, resources={r"/*": {"origins": "http://localhost:3000"}})
+CORS(app, resources={r"/*": {"origins": domain}})
 
 
-docAI = DocumentAI(host=host)
+docAI = DocumentAI(host=chroma_host)
 
 
 #TODO: Enable stream responses
 @app.route('/chat/completions', methods=['POST'])
 def chat_completions():
     data = request.get_json(force=True)
-    print(data)
+    logging.info(f"Received chat completion request: {data}")
     messages = data["messages"]
     if len(messages) > 0:
         data = messages[-1]['content']
@@ -44,16 +48,10 @@ def list_models():
     return make_response(jsonify({
             'data': [{
                 'object': 'engine',
-                'id': id,
+                'id': str(uuid.uuid4()),
                 'ready': True,
                 'owner': 'huggingface',
                 'permissions': None,
                 'created': None
             }]
         }))
-
-
-if __name__ == "__main__":
-    #uvicorn.run(app, host="0.0.0.0", port=4200)
-    app.run(host="0.0.0.0", port=4200, debug=True)
-

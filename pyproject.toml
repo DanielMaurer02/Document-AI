@@ -10,6 +10,7 @@ dependencies = [
     "dotenv>=0.9.9",
     "flask>=3.1.1",
     "flask-cors>=6.0.1",
+    "gunicorn>=23.0.0",
     "langchain>=0.3.26",
     "langchain-chroma>=0.2.4",
     "langchain-groq>=0.3.6",

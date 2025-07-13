@@ -19,12 +19,12 @@ def split_markdown_text(doc_text: str, metadata: Optional[dict] = None) -> list[
     
     documents = []
     for i, chunk in enumerate(md_split):
-        print(f"Chunk {i+1}:")
-        print(f"Total Number of Characters: {len(chunk)}")
-        print(f"Total Number of Words: {len(chunk.split(' '))}")
-        print(f"Total Number of Tokens: {len(chunk.split()) * (4/3)}")
-        print("------------------------------------------------")
-        
+        #print(f"Chunk {i+1}:")
+        #print(f"Total Number of Characters: {len(chunk)}")
+        #print(f"Total Number of Words: {len(chunk.split(' '))}")
+        #print(f"Total Number of Tokens: {len(chunk.split()) * (4/3)}")
+        #print("------------------------------------------------")
+
         # Create metadata for each chunk
         chunk_metadata = metadata.copy() if metadata else {}
         chunk_metadata["chunk_index"] = i

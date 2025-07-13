@@ -18,7 +18,7 @@ services:
     volumes:
       - chroma_data:/data
     ports:
-      - "8000:8000"
+      - "8008:8008"
     networks:
       - internal
     environment:
@@ -36,23 +36,26 @@ services:
 
 
 
-  #document-ai:
-  #  build:
-  #    context: ./ai-service
-  #  environment:
-  #    - EMBEDDING_SERVICE=alibaba
-  #    - LLM_SERVICE=qwen
-  #    - DASHSCOPE_API_KEY=KEY
-  #    #- HUGGINGFACE_API_KEY=KEY
-  #    #- GROQ_API_KEY=KEY
-  #    - EMBEDDING_MODEL_NAME=text-embedding-v3
-  #    - LLM_MODEL_NAME=qwen3-32b
+  document-ai-api:
+   build:
+     context: .
+   environment:
+     - EMBEDDING_SERVICE=alibaba
+     - LLM_SERVICE=qwen
+     - DASHSCOPE_API_KEY=KEY_DASHSCOPE
+     #- HUGGINGFACE_API_KEY=KEY
+     #- GROQ_API_KEY=KEY
+     - EMBEDDING_MODEL_NAME=text-embedding-v3
+     - LLM_MODEL_NAME=qwen3-32b
+     - DOMAIN=http://localhost:3000
 
-  #    - CHROMA_HOST=server
-  #  networks:
-  #    - internal
-  #  depends_on:
-  #    - server
+     - CHROMA_HOST=server
+   ports:
+    - "8000:8000"
+   networks:
+     - internal
+   depends_on:
+     - server
 
 networks:
   internal:

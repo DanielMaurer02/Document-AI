@@ -1,5 +1,8 @@
 from langchain_chroma import Chroma
 from .document_conversion.convert_documents import convert_documents
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 
@@ -22,5 +25,5 @@ def add_documents_to_chromadb(file_path: str | list[str], vectorstore: Chroma) -
         texts=texts,
         metadatas=metadatas,
     )
-    
-    print(f"Added {len(documents)} document chunks with metadata to the vectorstore")
+
+    logging.info(f"Added {len(documents)} document chunks with metadata to the vectorstore")

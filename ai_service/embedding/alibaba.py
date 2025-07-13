@@ -3,6 +3,9 @@ from typing import List
 from langchain_core.embeddings import Embeddings
 from dotenv import load_dotenv
 import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 DASHSCOPE_API_KEY = os.getenv('DASHSCOPE_API_KEY', None)
@@ -34,7 +37,7 @@ class AlibabaDashScopeEmbeddings(Embeddings):
             }
             response = requests.post(f"{self.base_url}/embeddings", json=payload, headers=self.headers)
             if response.status_code > 299:
-                print("Error:", response.status_code, response.text)
+                logging.error("Error: %s %s", response.status_code, response.text)
                 response.raise_for_status()
             data = response.json()
             all_embeddings.extend([item['embedding'] for item in data['data']])

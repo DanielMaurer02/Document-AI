@@ -2,12 +2,16 @@ import os
 
 from dotenv import load_dotenv
 import chromadb
+from chromadb.config import Settings
 from langchain_chroma import Chroma
 from langchain_core.embeddings import Embeddings
 from .embedding.embeddings import Embedding_Service, EmbeddingProvider
 from .add_documents import add_documents_to_chromadb
 from .query_llm import invoke_query
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 load_dotenv()
 EMBEDDING_SERVICE = os.getenv('EMBEDDING_SERVICE', 'alibaba')
@@ -21,9 +25,9 @@ class DocumentAI:
     
     def __init__(self, host: str = "localhost", port: int = 8000, collection_name: str = "rag"):
         start_time = time.time()
-        self.persistent_client = chromadb.HttpClient(host, port)
+        self.persistent_client = chromadb.HttpClient(host, port,settings=Settings(anonymized_telemetry=False))
         self.vectorstore, self.embeddings = self.__get_vectorstore(collection_name)
-        print(f"DocumentAI initialized in {time.time() - start_time:.2f} seconds")
+        logging.info(f"DocumentAI initialized in {time.time() - start_time:.2f} seconds")
 
     def __get_vectorstore(self, collection_name: str) -> tuple[Chroma, Embeddings]:
         """Create and configure a ChromaDB vectorstore with embeddings.
@@ -63,7 +67,7 @@ class DocumentAI:
         """
         start_time = time.time()
         add_documents_to_chromadb(file_path, self.vectorstore)
-        print(f"Documents added in {time.time() - start_time:.2f} seconds")
+        logging.info(f"Documents added in {time.time() - start_time:.2f} seconds")
 
 
     # TODO: Save answers from llm for session
@@ -78,7 +82,7 @@ class DocumentAI:
         """
         start_time = time.time()
         result = invoke_query(query, self.vectorstore, self.embeddings)
-        print(f"Query execution time: {time.time() - start_time:.2f} seconds")
+        logging.info(f"Query execution time: {time.time() - start_time:.2f} seconds")
         return result
 
 

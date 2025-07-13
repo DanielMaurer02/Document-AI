@@ -2,6 +2,9 @@
 from langchain_groq import ChatGroq
 from langchain_qwq import ChatQwen
 from enum import Enum
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 class LLMProvider(Enum):
     GROQ = "groq"
@@ -30,7 +33,7 @@ class LLM():
         """Create and return a Groq LLM instance with specified parameters.
         """
         self.model_name = "meta-llama/llama-4-maverick-17b-128e-instruct" if self.model_name is None else self.model_name
-        print("Using Groq LLM with model:", self.model_name)
+        logging.info("Using Groq LLM with model: %s", self.model_name)
         return ChatGroq(model=self.model_name,
                         temperature=0,
                         max_tokens=None,
@@ -41,5 +44,5 @@ class LLM():
         """Create and return a Qwen LLM instance with specified parameters.
         """
         self.model_name = "qwen3-32b" if self.model_name is None else self.model_name
-        print("Using Qwen LLM with model:", self.model_name)
+        logging.info("Using Qwen LLM with model: %s", self.model_name)
         return ChatQwen(model=self.model_name)
