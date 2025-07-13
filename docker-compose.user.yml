@@ -1,32 +1,13 @@
 services:
-  zipkin:
-    image: openzipkin/zipkin
-    ports:
-      - "9411:9411"
-    depends_on: [otel-collector]
-    networks:
-      - internal
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.129.1
-    command: ["--config=/etc/otel-collector-config.yaml"]
-    volumes:
-      - ${PWD}/otel-collector-config.yaml:/etc/otel-collector-config.yaml
-    networks:
-      - internal
   chroma:
     image: chromadb/chroma:1.0.15
     volumes:
       - chroma_data:/data
     ports:
-      - "8008:8000"
+      - "8000:8000"
     networks:
       - internal
-    environment:
-      - CHROMA_OPEN_TELEMETRY__ENDPOINT=http://otel-collector:4317/
-      - CHROMA_OPEN_TELEMETRY__SERVICE_NAME=chroma
-    depends_on:
-      - otel-collector
-      - zipkin
+
   openwebui:
     image: ghcr.io/open-webui/open-webui:main
     ports:
@@ -38,6 +19,8 @@ services:
 
   document-ai-api:
    image: danitherex/document-ai-api:latest
+   depends_on:
+     - chroma
    environment:
      - EMBEDDING_SERVICE=alibaba
      - LLM_SERVICE=qwen
@@ -49,13 +32,11 @@ services:
      - DOMAIN=http://localhost:3000
 
      - CHROMA_HOST=chroma
-     - CHROMA_PORT=8008
+     - CHROMA_PORT=8000
    ports:
-    - "8000:8000"
+    - "8008:8008"
    networks:
      - internal
-   depends_on:
-     - chroma
 
 
 networks:
