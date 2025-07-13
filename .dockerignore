@@ -11,12 +11,17 @@ Dockerfile
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__/
+__pycache__/
 **/*.py[cod]
 
 # Virtual environment
 .env
-.venv/
-venv/
+**/.venv/
+**/venv/
 
 # VS Code
 .vscode/
+
+**/.github/
+
+.DS_Store
