@@ -17,7 +17,7 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 
 The system consists of the following services:
 - **ChromaDB Server**: Vector database for document embeddings
-- **Document AI API**: Flask backend providing OpenAI-compatible API
+- **Document AI API**: Flask backend providing OpenAI-compatible API (pre-built Docker image)
 - **Open WebUI**: Modern web interface for chatting with your documents
 - **Observability Stack**: OpenTelemetry collector and Zipkin for tracing
 
@@ -73,7 +73,12 @@ The system is pre-configured to use Alibaba DashScope. You need to update the AP
 
 ```yaml
 environment:
+  - EMBEDDING_SERVICE=alibaba
+  - LLM_SERVICE=qwen
   - DASHSCOPE_API_KEY=your_api_key_here  # Replace with your actual API key
+  - EMBEDDING_MODEL_NAME=text-embedding-v3
+  - LLM_MODEL_NAME=qwen3-32b
+  - DOMAIN=http://localhost:3000
 ```
 
 **To get your API key:**
@@ -109,6 +114,7 @@ environment:
   - LLM_MODEL_NAME=meta-llama/llama-4-scout-17b-16e-instruct
   - HUGGINGFACE_API_KEY=your_huggingface_token_here
   - GROQ_API_KEY=your_groq_api_key_here
+  - DOMAIN=http://localhost:3000
 ```
 
 **Available Models:**
@@ -222,15 +228,39 @@ You can customize various aspects by modifying the docker-compose.yml file:
 ports:
   - "3000:8080"  # Change 3000 to your preferred port for Web UI
   - "8000:8000"  # Change first 8000 to your preferred API port
-  - "8008:8008"  # Change first 8008 to your preferred ChromaDB port
+  - "8008:8000"  # Change first 8008 to your preferred ChromaDB port
 ```
 
+#### Environment Variables
+The Document AI API supports the following environment variables:
+
+**Core Configuration:**
+- `EMBEDDING_SERVICE`: Embedding service provider (`alibaba`, `huggingface`)
+- `LLM_SERVICE`: Language model service (`qwen`, `groq`)
+- `EMBEDDING_MODEL_NAME`: Name of the embedding model to use
+- `LLM_MODEL_NAME`: Name of the LLM model to use
+- `DOMAIN`: Domain URL for the application (e.g., `http://localhost:3000`)
+
+**Database Configuration:**
+- `CHROMA_HOST`: ChromaDB server hostname (default: `chroma`)
+- `CHROMA_PORT`: ChromaDB server port (default: `8008`)
+
+**API Keys:**
+- `DASHSCOPE_API_KEY`: API key for Alibaba DashScope services
+- `HUGGINGFACE_API_KEY`: API key for HuggingFace services  
+- `GROQ_API_KEY`: API key for Groq services
+
 #### Model Configuration
+The system uses pre-built Docker images for easy deployment:
+
 ```yaml
-environment:
-  - EMBEDDING_MODEL_NAME=text-embedding-v3
-  - LLM_MODEL_NAME=qwen3-32b
-  # Change these to use different models
+# Document AI API service configuration
+document-ai-api:
+  image: danitherex/document-ai-api:latest  # Pre-built Docker image
+  environment:
+    - EMBEDDING_MODEL_NAME=text-embedding-v3
+    - LLM_MODEL_NAME=qwen3-32b
+    # Change these to use different models
 ```
 
 #### ChromaDB Configuration
@@ -246,7 +276,8 @@ You can customize the prompt template by modifying `ai_service/query_llm.py`. Th
 document-ai/
 ├── README.md
 ├── docker-compose.yml          # Complete system orchestration
-├── Dockerfile                  # Document AI API container
+├── docker-compose.user.yml     # User configuration template
+├── Dockerfile                  # Document AI API container build (for development)
 ├── app.py                     # Flask backend (OpenAI-compatible API)
 ├── pyproject.toml             # Python dependencies
 ├── ai_service/
@@ -266,6 +297,8 @@ document-ai/
 │       └── thinking_animation.py
 └── otel-collector-config.yaml # Observability configuration
 ```
+
+**Note**: The system now uses a pre-built Docker image (`danitherex/document-ai-api:latest`) for the API service, making deployment faster and more reliable. The Dockerfile is included for development purposes if you need to build custom versions.
 
 ## Monitoring and Observability
 
@@ -339,15 +372,29 @@ For better performance with large document collections:
 
 ### Local Development Setup
 
-If you want to develop or modify the system:
+The system now uses pre-built Docker images for production deployment. For development:
 
 1. Clone the repository
-2. Modify the code as needed
-3. Rebuild and restart:
+2. For quick testing, use the pre-built image (default configuration)
+3. For custom development, modify the code and rebuild:
    ```bash
+   # Build custom image locally
    docker-compose build
    docker-compose up -d
    ```
+
+### Building Custom Images
+
+If you need to modify the API service, you can build a custom image:
+
+```bash
+# Build the image locally
+docker build -t custom-document-ai-api .
+
+# Update docker-compose.yml to use your custom image
+# Change: image: danitherex/document-ai-api:latest
+# To: image: custom-document-ai-api
+```
 
 ### Adding New Features
 

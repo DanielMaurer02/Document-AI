@@ -12,14 +12,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 load_dotenv()
-chroma_host = os.getenv("CHROMA_HOST", "localhost")
 domain = os.getenv("DOMAIN", "http://localhost:3000")
 
 app = Flask("OpenAI-compatible API")
 CORS(app, resources={r"/*": {"origins": domain}})
 
 
-docAI = DocumentAI(host=chroma_host)
+docAI = DocumentAI()
 
 
 #TODO: Enable stream responses

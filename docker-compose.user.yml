@@ -13,12 +13,12 @@ services:
       - ${PWD}/otel-collector-config.yaml:/etc/otel-collector-config.yaml
     networks:
       - internal
-  server:
+  chroma:
     image: chromadb/chroma:1.0.15
     volumes:
       - chroma_data:/data
     ports:
-      - "8008:8008"
+      - "8008:8000"
     networks:
       - internal
     environment:
@@ -37,23 +37,26 @@ services:
 
 
   document-ai-api:
-    image: danitherex/document-ai-api:latest
-    environment:
-    - EMBEDDING_SERVICE=alibaba
-    - LLM_SERVICE=qwen
-    - DASHSCOPE_API_KEY=KEY_DASHSCOPE
-    #- HUGGINGFACE_API_KEY=KEY
-    #- GROQ_API_KEY=KEY
-    - EMBEDDING_MODEL_NAME=text-embedding-v3
-    - LLM_MODEL_NAME=qwen3-32b
-    - DOMAIN=http://localhost:3000
-    - CHROMA_HOST=server
-    ports:
+   image: danitherex/document-ai-api:latest
+   environment:
+     - EMBEDDING_SERVICE=alibaba
+     - LLM_SERVICE=qwen
+     - DASHSCOPE_API_KEY=DUMMY_API_KEY
+     #- HUGGINGFACE_API_KEY=DUMMY_API_KEY
+     #- GROQ_API_KEY=DUMMY_API_KEY
+     - EMBEDDING_MODEL_NAME=text-embedding-v3
+     - LLM_MODEL_NAME=qwen3-32b
+     - DOMAIN=http://localhost:3000
+
+     - CHROMA_HOST=chroma
+     - CHROMA_PORT=8008
+   ports:
     - "8000:8000"
-    networks:
+   networks:
      - internal
-    depends_on:
-     - server
+   depends_on:
+     - chroma
+
 
 networks:
   internal:

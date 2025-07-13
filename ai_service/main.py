@@ -23,8 +23,10 @@ class DocumentAI:
     add documents, and perform queries using vector similarity search.
     """
     
-    def __init__(self, host: str = "localhost", port: int = 8000, collection_name: str = "rag"):
+    def __init__(self, collection_name: str = "rag"):
         start_time = time.time()
+        host = os.getenv("CHROMA_HOST", "localhost")
+        port = int(os.getenv("CHROMA_PORT", 8008))
         self.persistent_client = chromadb.HttpClient(host, port,settings=Settings(anonymized_telemetry=False))
         self.vectorstore, self.embeddings = self.__get_vectorstore(collection_name)
         logging.info(f"DocumentAI initialized in {time.time() - start_time:.2f} seconds")
@@ -87,8 +89,7 @@ class DocumentAI:
 
 
 #file_path = [r"c:\Users\danie\Downloads\20240930 DHBW Zeugnis Daniel Maurer .pdf",r"c:\Users\danie\Downloads\MV blanko 1.OG rechts.pdf"]
-#host = os.getenv("CHROMA_HOST", "localhost")
-#doc_ai = DocumentAI(host=host)
+#doc_ai = DocumentAI("rag")
 #doc_ai.delete_collection("rag")  # Clear the collection before adding new documents
 #doc_ai.add_documents(file_path)
 #while True:
