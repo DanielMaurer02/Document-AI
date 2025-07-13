@@ -1,5 +1,5 @@
 from langchain_chroma import Chroma
-from document_conversion.convert_documents import convert_documents
+from .document_conversion.convert_documents import convert_documents
 import logging
 
 logging.basicConfig(level=logging.INFO)
