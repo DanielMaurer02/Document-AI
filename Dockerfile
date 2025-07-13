@@ -1,4 +1,4 @@
-FROM ghcr.io/astral-sh/uv:python3.13-bookworm
+FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim
 
 ARG EMBEDDING_SERVICE
 ARG LLM_SERVICE

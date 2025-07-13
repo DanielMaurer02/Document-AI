@@ -37,24 +37,22 @@ services:
 
 
   document-ai-api:
-   build:
-     context: .
-   environment:
-     - EMBEDDING_SERVICE=alibaba
-     - LLM_SERVICE=qwen
-     - DASHSCOPE_API_KEY=KEY_DASHSCOPE
-     #- HUGGINGFACE_API_KEY=KEY
-     #- GROQ_API_KEY=KEY
-     - EMBEDDING_MODEL_NAME=text-embedding-v3
-     - LLM_MODEL_NAME=qwen3-32b
-     - DOMAIN=http://localhost:3000
-
-     - CHROMA_HOST=server
-   ports:
+    image: danitherex/document-ai-api:latest
+    environment:
+    - EMBEDDING_SERVICE=alibaba
+    - LLM_SERVICE=qwen
+    - DASHSCOPE_API_KEY=KEY_DASHSCOPE
+    #- HUGGINGFACE_API_KEY=KEY
+    #- GROQ_API_KEY=KEY
+    - EMBEDDING_MODEL_NAME=text-embedding-v3
+    - LLM_MODEL_NAME=qwen3-32b
+    - DOMAIN=http://localhost:3000
+    - CHROMA_HOST=server
+    ports:
     - "8000:8000"
-   networks:
+    networks:
      - internal
-   depends_on:
+    depends_on:
      - server
 
 networks:
