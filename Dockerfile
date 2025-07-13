@@ -1,3 +1,6 @@
+#TODO: Optimize image for arm64, currently over 1 GB bigger than amd64
+
+
 FROM ghcr.io/astral-sh/uv:python3.13-bookworm-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
@@ -40,4 +43,4 @@ ENV PATH="/app/.venv/bin:$PATH"
 WORKDIR /app
 
 
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]

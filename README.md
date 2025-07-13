@@ -8,7 +8,7 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - **Vector Search**: Utilizes ChromaDB for efficient similarity search with multilingual embeddings
 - **RAG (Retrieval-Augmented Generation)**: Combines document retrieval with LLM responses for accurate, context-aware answers
 - **Web Interface**: Integrated Open WebUI for easy interaction with the document AI system
-- **API Backend**: Flask-based OpenAI-compatible API for seamless integration
+- **API Backend**: FastAPI-based OpenAI-compatible API for seamless integration
 - **Document Compression**: Uses LLM-based reranking for improved retrieval quality
 - **Source Attribution**: Provides source file paths and chunk information for transparency
 - **Multilingual Support**: Uses `text-embedding-v3` embeddings for multiple languages
@@ -17,9 +17,8 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 
 The system consists of the following services:
 - **ChromaDB Server**: Vector database for document embeddings
-- **Document AI API**: Flask backend providing OpenAI-compatible API (pre-built Docker image)
+- **Document AI API**: FastAPI backend providing OpenAI-compatible API (pre-built Docker image)
 - **Open WebUI**: Modern web interface for chatting with your documents
-- **Observability Stack**: OpenTelemetry collector and Zipkin for tracing
 
 ## Prerequisites
 
@@ -45,18 +44,16 @@ docker-compose up -d
 ```
 
 This will start:
-- ChromaDB server on port 8008
-- Document AI API on port 8000
+- ChromaDB server on port 8000
+- Document AI API on port 8008
 - Open WebUI on port 3000
-- Zipkin tracing on port 9411
-- OpenTelemetry collector for observability
 
 #### Step 3: Configure WebUI Connection
 1. Open http://localhost:3000 in your browser
 2. In the Open WebUI interface, go to **Settings** (gear icon)
 3. Navigate to **Connections** or **External Connections**
 4. Add a new OpenAI API connection with:
-   - **API Base URL**: `http://localhost:8000`
+   - **API Base URL**: `http://localhost:8008`
    - **API Key**: `not-required` (or leave empty)
 5. Save the configuration
 
@@ -64,8 +61,7 @@ This will start:
 
 Once all services are running and configured, you can:
 - **Chat with your documents**: Use the web interface at http://localhost:3000
-- **View tracing data**: Access Zipkin at http://localhost:9411
-- **API endpoint**: The OpenAI-compatible API is available at http://localhost:8000
+- **API endpoint**: The OpenAI-compatible API is available at http://localhost:8008
 
 ### Configure API Keys
 
@@ -199,11 +195,14 @@ Delete a collection from ChromaDB (useful for cleanup or reset).
 
 ## API Endpoints
 
-The Flask backend provides an OpenAI-compatible API:
+The FastAPI backend provides an OpenAI-compatible API with automatic interactive documentation:
+
+- **Interactive API Documentation**: Available at http://localhost:8008/docs
+- **OpenAPI Schema**: Available at http://localhost:8008/openapi.json
 
 ### Chat Completions
 ```bash
-curl -X POST http://localhost:8000/chat/completions \
+curl -X POST http://localhost:8008/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "messages": [
@@ -214,7 +213,7 @@ curl -X POST http://localhost:8000/chat/completions \
 
 ### List Models
 ```bash
-curl http://localhost:8000/models
+curl http://localhost:8008/models
 ```
 
 ## Configuration
@@ -227,8 +226,8 @@ You can customize various aspects by modifying the docker-compose.yml file:
 ```yaml
 ports:
   - "3000:8080"  # Change 3000 to your preferred port for Web UI
-  - "8000:8000"  # Change first 8000 to your preferred API port
-  - "8008:8000"  # Change first 8008 to your preferred ChromaDB port
+  - "8008:8008"  # Change first 8008 to your preferred API port
+  - "8000:8000"  # Change first 8000 to your preferred ChromaDB port
 ```
 
 #### Environment Variables
@@ -247,7 +246,7 @@ The Document AI API supports the following environment variables:
 
 **API Keys:**
 - `DASHSCOPE_API_KEY`: API key for Alibaba DashScope services
-- `HUGGINGFACE_API_KEY`: API key for HuggingFace services  
+- `HUGGINGFACE_API_KEY`: API key for HuggingFace services
 - `GROQ_API_KEY`: API key for Groq services
 
 #### Model Configuration
@@ -278,7 +277,7 @@ document-ai/
 ├── docker-compose.yml          # Complete system orchestration
 ├── docker-compose.user.yml     # User configuration template
 ├── Dockerfile                  # Document AI API container build (for development)
-├── app.py                     # Flask backend (OpenAI-compatible API)
+├── app.py                     # FastAPI backend (OpenAI-compatible API)
 ├── pyproject.toml             # Python dependencies
 ├── ai_service/
 │   ├── main.py                # Main DocumentAI class
@@ -295,26 +294,12 @@ document-ai/
 │   │   └── model.py          # LLM configuration
 │   └── utils/
 │       └── thinking_animation.py
-└── otel-collector-config.yaml # Observability configuration
 ```
 
 **Note**: The system now uses a pre-built Docker image (`danitherex/document-ai-api:latest`) for the API service, making deployment faster and more reliable. The Dockerfile is included for development purposes if you need to build custom versions.
 
-## Monitoring and Observability
+## Logs
 
-The system includes comprehensive observability features:
-
-### Zipkin Tracing
-- **URL**: http://localhost:9411
-- **Features**: Distributed tracing across all services
-- **Use Cases**: Performance monitoring, debugging, request flow analysis
-
-### OpenTelemetry
-- Automatic instrumentation for ChromaDB operations
-- Custom tracing for document processing and LLM calls
-- Metrics collection for system performance
-
-### Logs
 View real-time logs for all services:
 ```bash
 # All services
@@ -322,7 +307,7 @@ docker-compose logs -f
 
 # Specific service
 docker-compose logs -f document-ai-api
-docker-compose logs -f server  # ChromaDB
+docker-compose logs -f chroma  # ChromaDB
 docker-compose logs -f openwebui
 ```
 
@@ -330,23 +315,23 @@ docker-compose logs -f openwebui
 
 ### Common Issues
 
-1. **Services not starting**: 
+1. **Services not starting**:
    ```bash
    docker-compose down
    docker-compose up -d --build --force-recreate
    ```
 
-2. **API Key Issues**: 
+2. **API Key Issues**:
    - Verify your API key is correctly set in docker-compose.yml
    - Check that the API key has necessary permissions
    - Restart the services after changing the key
 
-3. **Memory Issues with Large Documents**: 
+3. **Memory Issues with Large Documents**:
    - Monitor container resources: `docker stats`
    - Consider processing documents in smaller batches
 
 4. **Connection Issues**:
-   - Check if all ports are available (3000, 8000, 8008, 9411)
+   - Check if all ports are available (3000, 8000, 8008)
    - Verify no other services are using these ports
 
 ### Health Checks
@@ -357,7 +342,7 @@ Check service status:
 docker-compose ps
 
 # Check specific service health
-curl http://localhost:8000/models  # API health
+curl http://localhost:8008/models  # API health
 curl http://localhost:8008/api/v1/heartbeat  # ChromaDB health
 ```
 
@@ -382,6 +367,26 @@ The system now uses pre-built Docker images for production deployment. For devel
    docker-compose build
    docker-compose up -d
    ```
+
+#### Running the FastAPI Development Server Locally
+
+For local development and testing of the API:
+
+```bash
+# Install dependencies
+uv sync
+
+# Install pre-commit hooks for code quality
+uv run pre-commit install
+
+# Run the FastAPI development server with auto-reload
+uv run app.py
+```
+
+The FastAPI server will start with:
+- Automatic reload on code changes
+- Interactive API documentation at http://localhost:8008/docs
+- OpenAPI schema at http://localhost:8008/openapi.json
 
 ### Building Custom Images
 
