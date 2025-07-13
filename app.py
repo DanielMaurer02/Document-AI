@@ -81,6 +81,7 @@ def _chat_stream_generator(prompt: str) -> Iterable[str]:
     yield "data: [DONE]\n\n"
 
 
+# TODO: Save answers from llm for session (are being returned in message object)
 @app.post("/chat/completions")
 async def chat_completions(request: ChatCompletionRequest):
     """OpenAI‑compatible chat endpoint."""

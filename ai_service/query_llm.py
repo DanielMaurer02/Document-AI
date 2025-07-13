@@ -7,7 +7,7 @@ from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMListwiseRerank
 
 from .utils.thinking_animation import ThinkingAnimation
-from .utils.query.index import get_llm, generate_prompt, format_docs, process_chunk
+from .utils.query import get_llm, generate_prompt, format_docs, process_chunk
 
 
 def invoke_query(query: str, vectorstore: Chroma) -> str:
