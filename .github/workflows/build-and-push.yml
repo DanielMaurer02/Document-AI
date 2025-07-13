@@ -25,4 +25,6 @@ jobs:
     - name: Build and Push Document AI Docker image
       run: |
         docker build -t ${{ secrets.DOCKER_USERNAME }}/document-ai-api:latest .
+        docker tag ${{ secrets.DOCKER_USERNAME }}/document-ai-api:latest ${{ secrets.DOCKER_USERNAME }}/document-ai-api:${{ github.sha }}
+        docker push ${{ secrets.DOCKER_USERNAME }}/document-ai-api:${{ github.sha }}
         docker push ${{ secrets.DOCKER_USERNAME }}/document-ai-api:latest
