@@ -16,8 +16,12 @@ __pycache__/
 
 # Virtual environment
 .env
+.venv/
+.venv
 **/.venv/
 **/venv/
+venv/
+venv
 
 # VS Code
 .vscode/
@@ -25,3 +29,17 @@ __pycache__/
 **/.github/
 
 .DS_Store
+
+# Logs
+*.log
+logs/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+*.swp
+*.swo

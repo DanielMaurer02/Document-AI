@@ -16,10 +16,14 @@ ENV LLM_MODEL_NAME=${LLM_MODEL_NAME}
 ENV DOMAIN=${DOMAIN}
 ENV TOKENIZERS_PARALLELISM=False
 
-COPY . /app
+# Copy dependency files first for better caching
+COPY pyproject.toml uv.lock ./
 WORKDIR /app
 
 # Install dependencies
-RUN uv sync --locked
+RUN uv sync --locked --no-dev
+
+# Copy application code
+COPY . .
 
 CMD ["uv", "run", "--with", "gunicorn", "gunicorn", "--bind", "0.0.0.0:8000", "app:app"]
