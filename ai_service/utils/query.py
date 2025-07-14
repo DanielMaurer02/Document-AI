@@ -17,7 +17,7 @@ logging.basicConfig(
 
 
 load_dotenv()
-LLM_SERVICE = os.getenv("LLM_SERVICE", "qwen")
+LLM_SERVICE = os.getenv("LLM_SERVICE", "qwen_remote")
 LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "qwen3-32b")
 
 
@@ -36,7 +36,7 @@ def generate_prompt():
         "Context information is below. Each piece of context includes source information in brackets.\n"
         "---------------------\n{context}\n---------------------\n"
         "If you find the context to be relevant, use it to answer the question.\n"
-        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. Include the full path, not just the filename. Don't include the corresponding chunk_id.\n"
+        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. Include the full path, not just the filename. Don't include the corresponding Chunk in the source as it is not relevant.\n"
         "Only give the source file paths for information that you got from the context, not for information that you already know. Never state that you didn't find sources for non context information. You can detect sources paths that are not coming from the context by looking at this example: [Source: file_path, Chunk: chunk_id].\n"
         "Don't include a source for information that you already know, even if it is relevant to the question.\n"
         "Only include relevant information from the context.\n"
@@ -56,7 +56,7 @@ def get_llm():
     """Get the LLM instance based on the configured LLM service and model name.
 
     Creates and returns an LLM instance using the LLM_SERVICE and LLM_MODEL_NAME
-    environment variables. Falls back to 'qwen' service and 'qwen3-32b' model
+    environment variables. Falls back to 'qwen_remote' service and 'qwen3-32b' model
     if environment variables are not set.
 
     Returns:

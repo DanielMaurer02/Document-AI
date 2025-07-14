@@ -45,8 +45,7 @@ class DocumentAI:
             collection_name (str): The name of the collection to create or connect to.
 
         Returns:
-            tuple[Chroma, HuggingFaceEmbeddings]: A tuple containing the vectorstore instance
-                and the embeddings model.
+            Chroma: A vectorstore instance
         """
         provider_service = EmbeddingProvider(EMBEDDING_SERVICE.lower())
         embedding_service = Embedding_Service(provider_service)
