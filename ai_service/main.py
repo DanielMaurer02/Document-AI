@@ -4,12 +4,14 @@ from unittest import result
 
 from dotenv import load_dotenv
 import chromadb
+
 from chromadb.config import Settings
 from langchain_chroma import Chroma
-from .embedding.embeddings import Embedding_Service, EmbeddingProvider
-from .add_documents import add_documents_to_chromadb
-from .query_llm import invoke_query, invoke_query_stream
-from .utils.hash_file import blake2b_file
+
+from ai_service.embedding.embeddings import Embedding_Service, EmbeddingProvider
+from ai_service.add_documents import add_documents_to_chromadb
+from ai_service.query_llm import invoke_query, invoke_query_stream
+from ai_service.utils.hash_file import blake2b_file
 import time
 import logging
 
@@ -45,8 +47,7 @@ class DocumentAI:
             collection_name (str): The name of the collection to create or connect to.
 
         Returns:
-            tuple[Chroma, HuggingFaceEmbeddings]: A tuple containing the vectorstore instance
-                and the embeddings model.
+            Chroma: A vectorstore instance
         """
         provider_service = EmbeddingProvider(EMBEDDING_SERVICE.lower())
         embedding_service = Embedding_Service(provider_service)
