@@ -35,7 +35,7 @@ def generate_prompt():
         "Context information is below. Each piece of context includes source information in brackets.\n"
         "---------------------\n{context}\n---------------------\n"
         "If you find the context to be relevant, use it to answer the question.\n"
-        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. Include the full path, not just the filename. Don't include the corresponding Chunk in the source as it is not relevant.\n"
+        "If you found relevant context, always include the source file path(s) where the information was found and place that information at the bottom. Include the full path, not just the filename. Don't include the corresponding chunk in the source as it is not relevant.\n"
         "Only give the source file paths for information that you got from the context, not for information that you already know. Never state that you didn't find sources for non context information. You can detect sources paths that are not coming from the context by looking at this example: [Source: file_path, Chunk: chunk_id].\n"
         "Don't include a source for information that you already know, even if it is relevant to the question.\n"
         "Only include relevant information from the context.\n"
