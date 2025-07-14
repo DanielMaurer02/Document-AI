@@ -1,5 +1,6 @@
 ################ 1. build stage (compile llama‑cpp‑python) ################
-FROM nvidia/cuda:12.5.0-devel-ubuntu22.04 AS builder # TODO: Change to correct CUDA version
+# TODO: Change to correct CUDA version
+FROM nvidia/cuda:11.8.0-devel-ubuntu22.04 AS builder
 
 ARG EMBEDDING_SERVICE
 ARG LLM_SERVICE
@@ -8,46 +9,69 @@ ARG CHROMA_HOST
 ARG CHROMA_PORT
 ARG DOMAIN
 
-ENV EMBEDDING_SERVICE=${EMBEDDING_SERVICE}
-ENV LLM_SERVICE=${LLM_SERVICE}
-ENV EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME}
-ENV CHROMA_HOST=${CHROMA_HOST}
-ENV CHROMA_PORT=${CHROMA_PORT}
-ENV DOMAIN=${DOMAIN}
-ENV TOKENIZERS_PARALLELISM=False
+ENV EMBEDDING_SERVICE=${EMBEDDING_SERVICE} \
+    LLM_SERVICE=${LLM_SERVICE} \
+    EMBEDDING_MODEL_NAME=${EMBEDDING_MODEL_NAME} \
+    CHROMA_HOST=${CHROMA_HOST} \
+    CHROMA_PORT=${CHROMA_PORT} \
+    DOMAIN=${DOMAIN} \
+    TOKENIZERS_PARALLELISM=false \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
 
-
-# system deps
+# Install system dependencies
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends curl git build-essential cmake && \
+    apt-get install -y --no-install-recommends \
+        curl \
+        git \
+        build-essential \
+        cmake \
+        && \
     rm -rf /var/lib/apt/lists/*
 
-# uv – single‑binary installer
-RUN curl -Ls https://astral.sh/uv/install | bash
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
 ENV PATH="/root/.local/bin:$PATH" \
     FORCE_CMAKE=1 \
-    CMAKE_ARGS="-DGGML_CUDA=ON -DLLAMA_CUBLAS=ON" \
-    UV_LINK_MODE=copy UV_COMPILE_BYTECODE=1 UV_PYTHON_DOWNLOADS=0
+    CMAKE_ARGS="-DGGML_CUDA=ON" \
+    UV_LINK_MODE=copy \
+    UV_COMPILE_BYTECODE=1 \
+    UV_PYTHON_DOWNLOADS=1
 
 WORKDIR /app
+
+# Copy dependency files first for better caching
 COPY pyproject.toml uv.lock ./
 
-# build‑only extras first (CUDA wheel)
-RUN uv sync --locked --group build --no-dev
-# then runtime deps
-RUN uv sync --locked --no-install-project --no-dev
+# Install Python 3.13 (matching pyproject.toml requirement)
+RUN uv python install 3.13
 
-COPY . .
+# Install dependencies in single command
+RUN uv sync --locked --no-dev
 
-# pull the GGUF weights once
+# Copy source code
+COPY --chown=root:root . .
+
 RUN uv run python scripts/download_model.py
 
-################ 2. runtime stage (thin, CUDA libs only) ##################
-FROM nvidia/cuda:12.5.0-runtime-ubuntu22.04
+################ 2. runtime stage ################
+FROM nvidia/cuda:11.8.0-runtime-ubuntu22.04
+
+RUN groupadd -r app && useradd -r -g app app
+
 WORKDIR /app
-COPY --from=builder /app /app
+
+COPY --from=builder --chown=app:app /app /app
+
+
 ENV PATH="/app/.venv/bin:$PATH" \
-    TOKENIZERS_PARALLELISM=false
+    TOKENIZERS_PARALLELISM=false \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+
 
 EXPOSE 8008
+
+
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8008"]
