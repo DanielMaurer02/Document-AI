@@ -61,7 +61,7 @@ class LLM():
 
         n_gpu_layers = 28
         # Optimized for RTX 3080 10GB
-        return LlamaCpp(model_path=self.model_name,  # type: ignore[call-arg]
+        return LlamaCpp(model_path=DEST,  # type: ignore[call-arg]
             n_gpu_layers=n_gpu_layers,
             n_ctx=4096,
             n_batch=256,
