@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
-
-from ..llm.model import LLMProvider, LLM
+from ai_service.llm.model import LLM, LLMProvider
 import datetime
 from typing import Iterable
 
@@ -102,7 +101,7 @@ def format_docs(docs: Iterable[LCDocument]):
     return "\n\n".join(formatted_docs)
 
 
-def process_chunk(chunk: BaseMessage) -> str:
+def process_chunk(chunk: BaseMessage | str) -> str:
     """Process a message chunk and extract its content as a string.
 
     Extracts the content from a BaseMessage object and converts it to a string.
@@ -121,7 +120,9 @@ def process_chunk(chunk: BaseMessage) -> str:
     content = ""
 
     # Handle different types of chunks
-    if hasattr(chunk, "content"):
+    if isinstance(chunk, str):
+        content = chunk
+    elif hasattr(chunk, "content"):
         content = str(chunk.content) if chunk.content is not None else ""
     elif hasattr(chunk, "text"):
         content = str(chunk.text) if chunk.text is not None else ""

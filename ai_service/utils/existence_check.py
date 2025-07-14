@@ -1,5 +1,5 @@
 from langchain_chroma import Chroma
-from .hash_file import blake2b_file
+from ai_service.utils.hash_file import blake2b_file
 import logging
 
 logging.basicConfig(level=logging.INFO)

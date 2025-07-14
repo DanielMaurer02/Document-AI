@@ -24,7 +24,7 @@ class Embedding_Service:
             from langchain_huggingface.embeddings import HuggingFaceEmbeddings
             return HuggingFaceEmbeddings(model_name="Qwen/Qwen3-Embedding-0.6B" if EMBEDDING_MODEL_NAME is None else EMBEDDING_MODEL_NAME)
         elif self.embedding_provider == EmbeddingProvider.ALIBABA:
-            from .alibaba import AlibabaDashScopeEmbeddings
+            from ai_service.embedding.alibaba import AlibabaDashScopeEmbeddings
             return AlibabaDashScopeEmbeddings(model_name="text-embedding-v3" if EMBEDDING_MODEL_NAME is None else EMBEDDING_MODEL_NAME)
         else:
             raise ValueError(f"Unsupported embedding provider: {self.embedding_provider}")

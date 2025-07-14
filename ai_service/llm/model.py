@@ -5,7 +5,7 @@ from langchain_community.llms.llamacpp import LlamaCpp
 from enum import Enum
 import logging
 import os
-from ..utils.constants import DEST, REPO
+from ai_service.utils.constants import DEST
 logging.basicConfig(level=logging.INFO)
 
 class LLMProvider(Enum):

@@ -2,7 +2,7 @@
 Pull Qwen2.5‑7B‑Instruct‑Q4_K_M.gguf once and cache it in /models.
 """
 from huggingface_hub import hf_hub_download
-from ..ai_service.utils.constants import REPO, FILE, DEST
+from ai_service.utils.constants import REPO, FILE, DEST
 
 
 def main():

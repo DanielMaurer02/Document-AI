@@ -1,8 +1,8 @@
 from langchain_chroma import Chroma
-from .document_conversion.convert_documents import convert_documents
-from .utils.hash_file import blake2b_file
-from .utils.load_file import load_file_from_bucket, remove_temp_file
-from .utils.existence_check import check_document_exists
+from ai_service.document_conversion.convert_documents import convert_documents
+from ai_service.utils.hash_file import blake2b_file
+from ai_service.utils.load_file import load_file_from_bucket, remove_temp_file
+from ai_service.utils.existence_check import check_document_exists
 import logging
 from pathlib import Path
 
