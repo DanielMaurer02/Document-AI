@@ -8,7 +8,8 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 
 
-def add_documents_to_chromadb( #TODO: Progress indicator
+# TODO: Progress indicator
+def add_documents_to_chromadb(
     file_path: str | list[str], vectorstore: Chroma
 ) -> None:
     """Add documents to ChromaDB with metadata including file paths and duplicate detection.
