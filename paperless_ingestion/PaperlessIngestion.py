@@ -99,7 +99,7 @@ class PaperlessIngestion:
             logger.error(f"Error downloading document {document_id}: {e}")
             self.failures.append(download_url)
 
-    def download_all_documents(self) -> List[str] | None:
+    def download_all_documents(self) -> List[str]:
         """Download all documents to a temporary directory."""
         docs = self.get_all_documents()
         
