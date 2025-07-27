@@ -117,7 +117,7 @@ class PaperlessIngestion:
             logger.warning(f"Failed to download {len(self.failures)} documents: {self.failures}")
         return self.downloaded_files
 
-    def download_specific_document(self, document_id: int, title: str) -> List[str] | None:
+    def download_specific_document(self, document_id: int, title: str) -> List[str]:
         """Download a specific document to a temporary directory."""
         self._download_document(document_id, title, self.temp_dir)
         return self.downloaded_files
