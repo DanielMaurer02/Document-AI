@@ -1,7 +1,6 @@
 from langchain_chroma import Chroma
 from ai_service.document_conversion.convert_documents import convert_documents
 from ai_service.utils.hash_file import blake2b_file
-from ai_service.utils.load_file import load_file_from_bucket, remove_temp_file
 from ai_service.utils.existence_check import check_document_exists
 import logging
 from pathlib import Path
@@ -9,8 +8,8 @@ from pathlib import Path
 logging.basicConfig(level=logging.INFO)
 
 
-def add_documents_to_chromadb(
-    bucket_file_path: str | list[str], vectorstore: Chroma
+def add_documents_to_chromadb( #TODO: Progress indicator
+    file_path: str | list[str], vectorstore: Chroma
 ) -> None:
     """Add documents to ChromaDB with metadata including file paths and duplicate detection.
 
@@ -19,26 +18,25 @@ def add_documents_to_chromadb(
             to convert and add to the vectorstore.
         vectorstore (Chroma): ChromaDB vectorstore instance where documents will be added.
     """
-    if isinstance(bucket_file_path, str):
-        bucket_file_paths = [bucket_file_path]
+    if isinstance(file_path, str):
+        file_path_array = [file_path]
     else:
-        bucket_file_paths = bucket_file_path
+        file_path_array = file_path
 
     # Filter out duplicates
     file_paths = []
     skipped_count = 0
 
-    for bfp in bucket_file_paths:
-        if check_document_exists(bfp, vectorstore):
-            logging.info(f"Skipping duplicate document: {Path(bfp).name}")
+    for fp in file_path_array:
+        if check_document_exists(fp, vectorstore):
+            logging.info(f"Skipping duplicate document: {Path(fp).name}")
             skipped_count += 1
         else:
-            fp = load_file_from_bucket(bfp)
             file_paths.append(fp)
 
     if not file_paths:
         logging.info(
-            f"All {len(bucket_file_paths)} documents already exist in the vectorstore"
+            f"All {len(file_path_array)} documents already exist in the vectorstore"
         )
         return
 
@@ -72,8 +70,5 @@ def add_documents_to_chromadb(
     logging.info(
         f"Added {len(documents)} document chunks from {len(file_paths)} new files to the vectorstore"
     )
-
-    for fp in file_paths:
-        remove_temp_file(fp)
 
     logging.info("Temporary files removed after processing")

@@ -5,13 +5,15 @@ import time
 import uuid
 from typing import Iterable
 from models import ChatCompletionRequest
+import threading
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 
 from ai_service.main import DocumentAI
+from paperless_ingestion.PaperlessIngestion import PaperlessIngestion
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -34,7 +36,9 @@ app.add_middleware(
 )
 
 
+
 doc_ai = DocumentAI()
+paperless_ingest = PaperlessIngestion()
 
 
 def _format_sse_chunk(
@@ -127,7 +131,32 @@ async def list_models():
             }
         ]
     }
+@app.post("/paperless/full_load")
+def full_load_paperless():
+    """Trigger background download and processing of all Paperless documents."""
+    def background_task():
+        logging.info("Starting full load of Paperless documents")
+        downloaded_files = paperless_ingest.download_all_documents()
+        if downloaded_files:
+            logging.info(f"Successfully downloaded {len(downloaded_files)} documents")
+            for downloaded_file in downloaded_files:
+                if doc_ai.vectorstore:
+                    doc_ai.add_documents([downloaded_file])
+            paperless_ingest.cleanup_downloaded_files()
+            logging.info("All documents processed with AI service")
+        else:
+            logging.warning("No documents were downloaded or an error occurred")
 
+    threading.Thread(target=background_task, daemon=True).start()
+    return {"status": "started", "message": "Full load started in background"}
+
+@app.post("/chroma/drop_collection")
+def drop_collection():
+    """Drop the ChromaDB collection."""
+    logging.info("Dropping ChromaDB collection")
+    doc_ai.delete_collection()
+    logging.info("ChromaDB collection dropped successfully")
+    return {"status": "success", "message": "ChromaDB collection dropped"}             
 
 if __name__ == "__main__":
     import uvicorn

@@ -12,6 +12,9 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - **Document Compression**: Uses LLM-based reranking for improved retrieval quality
 - **Source Attribution**: Provides source file paths and chunk information for transparency
 - **Multilingual Support**: Uses `text-embedding-v3` embeddings for multiple languages
+- **Paperless Integration**: Seamless integration with Paperless-ngx document management system
+- **Parallel Processing**: Multi-threaded document processing for improved performance with multiple files
+- **Automated Collection Management**: API endpoints for managing document collections and triggering bulk operations
 
 ## Architecture
 
@@ -48,12 +51,14 @@ cp docker-compose.user.yml docker-compose.yml
 ```
 
 **Step 2: Configure API Keys**
-Edit the docker-compose.yml file and replace the placeholder API keys:
+Edit the docker-compose.yml file and replace the placeholder API keys with your actual keys:
 
 ```yaml
 environment:
-  - DASHSCOPE_API_KEY=your_actual_dashscope_key_here  # Replace KEY with actual key
-  - HUGGINGFACE_API_KEY=your_actual_huggingface_key_here  # Replace KEY with actual key
+  - DASHSCOPE_API_KEY=your_actual_dashscope_key_here  # Replace with actual key
+  - HUGGINGFACE_API_KEY=your_actual_huggingface_key_here  # Replace with actual key
+  - PAPERLESS_API_URL=your_paperless_url_here  # Optional: for Paperless integration
+  - PAPERLESS_API_TOKEN=your_paperless_token_here  # Optional: for Paperless integration
 ```
 
 **Step 3: Start Remote Services**
@@ -75,12 +80,14 @@ This mode runs a local Qwen 2.5 7B model using GPU acceleration. Requires an NVI
 cp docker-compose.user.yml docker-compose.yml
 ```
 
-**Step 2: Configure HuggingFace API Key**
-Edit docker-compose.yml and set your HuggingFace API key (needed for embeddings):
+**Step 2: Configure HuggingFace API Key and Optional Paperless Integration**
+Edit docker-compose.yml and set your HuggingFace API key (needed for embeddings) and optionally configure Paperless integration:
 
 ```yaml
 environment:
-  - HUGGINGFACE_API_KEY=your_actual_huggingface_key_here  # Replace KEY with actual key
+  - HUGGINGFACE_API_KEY=your_actual_huggingface_key_here  # Replace with actual key
+  - PAPERLESS_API_URL=your_paperless_url_here  # Optional: for Paperless integration
+  - PAPERLESS_API_TOKEN=your_paperless_token_here  # Optional: for Paperless integration
 ```
 
 **Step 3: Adjust CUDA Version (if needed)**
@@ -168,6 +175,7 @@ environment:
 - **Alibaba DashScope**: Sign up at [Alibaba Cloud DashScope](https://dashscope.aliyun.com/)
 - **HuggingFace**: Get your token at [HuggingFace Tokens](https://huggingface.co/settings/tokens)
 - **Groq**: Get your API key at [Groq Console](https://console.groq.com)
+- **Paperless-ngx**: Configure your Paperless instance URL and generate an API token from your Paperless settings
 
 
 ### Alternative Configuration Options
@@ -244,9 +252,76 @@ environment:
 
 There are several ways to add documents to the system:
 
+#### Method 1: Paperless-ngx Integration (Recommended for automated workflows)
+
+The system now includes seamless integration with Paperless-ngx document management systems. This allows you to automatically sync and process documents from your existing Paperless instance.
+
+**Setup Paperless Integration:**
+1. Configure your Paperless instance URL and API token in docker-compose.yml:
+   ```yaml
+   environment:
+     - PAPERLESS_API_URL=https://your-paperless-instance.com/api/documents/
+     - PAPERLESS_API_TOKEN=your_paperless_api_token_here
+   ```
+
+2. Use the API endpoint to trigger a full sync:
+   ```bash
+   curl -X POST http://localhost:8008/paperless/full_load
+   ```
+
+**Features:**
+- **Automatic Download**: Downloads all documents from your Paperless instance to a temporary directory
+- **Parallel Processing**: Processes multiple documents concurrently for improved performance
+- **Automatic Cleanup**: Removes temporary files after processing
+- **Background Processing**: Runs in a separate thread to avoid blocking the API
+- **Error Handling**: Comprehensive logging and error tracking for failed downloads
+
+#### Method 2: Using the Python API (for developers)
+
+The main interface is the `DocumentAI` class in `ai_service/main.py`:
+
+```python
+from ai_service.main import DocumentAI
+
+# Initialize the Document AI system
+doc_ai = DocumentAI(collection_name="rag")  # ChromaDB connection automatically configured
+
+# Add documents to the vector database (with automatic duplicate detection and parallel processing)
+file_paths = [
+    "/path/to/your/document1.pdf",
+    "/path/to/your/document2.pdf",
+    "/path/to/your/document3.pdf"
+]
+doc_ai.add_documents(file_paths)  # Multiple files processed in parallel automatically
+
+# Force re-add documents even if they already exist
+doc_ai.add_documents(file_paths, force_readd=True)
+
+# Query the documents
+query = "What information can you find about...?"
+result = doc_ai.query(query)
+print(f"Query Result: {result}")
+```
+
+#### Method 3: Direct File Upload
+
+You can copy PDF files directly into the running container and process them:
+
+```bash
+# Copy documents to the container
+docker cp /path/to/your/document.pdf document-ai-document-ai-api-1:/app/documents/
+
+# Execute a Python script to add documents
+docker exec -it document-ai-document-ai-api-1 python -c "
+from ai_service.main import DocumentAI
+doc_ai = DocumentAI(collection_name='rag')
+doc_ai.add_documents(['/app/documents/document.pdf'])
+"
+```
+
 #### Duplicate Detection
 
-The system now automatically detects duplicate documents using BLAKE2b file hashing before processing and embedding. This prevents:
+The system automatically detects duplicate documents using BLAKE2b file hashing before processing and embedding. This prevents:
 - Wasting computational resources on re-processing the same files
 - Creating duplicate embeddings that could skew search results
 - Unnecessary storage usage
@@ -259,62 +334,17 @@ The system now automatically detects duplicate documents using BLAKE2b file hash
 
 **Force Re-adding:** If you need to re-process a document (e.g., after changing embedding models), you can use the `force_readd=True` parameter.
 
-#### Method 1: Using the Python API (for developers)
-
-The main interface is the `DocumentAI` class in `ai_service/main.py`:
-
-```python
-from ai_service.main import DocumentAI
-
-# Initialize the Document AI system
-doc_ai = DocumentAI(host="server")  # "server" is the ChromaDB service name
-
-# Add documents to the vector database (with automatic duplicate detection)
-file_paths = [
-    "/path/to/your/document1.pdf",
-    "/path/to/your/document2.pdf"
-]
-doc_ai.add_documents(file_paths)
-
-# Force re-add documents even if they already exist
-doc_ai.add_documents(file_paths, force_readd=True)
-
-# Query the documents
-query = "What information can you find about...?"
-result = doc_ai.query(query)
-print(f"Query Result: {result}")
-```
-
-#### Method 2: Direct File Upload
-
-You can copy PDF files directly into the running container and process them:
-
-```bash
-# Copy documents to the container
-docker cp /path/to/your/document.pdf document-ai-document-ai-api-1:/app/documents/
-
-# Execute a Python script to add documents
-docker exec -it document-ai-document-ai-api-1 python -c "
-from ai_service.main import DocumentAI
-doc_ai = DocumentAI(host='server')
-doc_ai.add_documents(['/app/documents/document.pdf'])
-"
-```
-
 ### DocumentAI Class Methods
 
-#### `__init__(host="localhost", port=8008, collection_name="rag")`
-Initialize the DocumentAI instance with ChromaDB connection parameters.
+#### `__init__(collection_name="rag")`
+Initialize the DocumentAI instance with ChromaDB connection parameters. The connection to ChromaDB is automatically configured using environment variables (`CHROMA_HOST` and `CHROMA_PORT`).
 
 #### `add_documents(file_path: str | list[str], force_readd: bool = False)`
-Add one or more PDF documents to the vector database with automatic duplicate detection. Documents are:
-1. Checked for duplicates using BLAKE2b file hashing
-2. Skipped if already processed (unless `force_readd=True`)
-3. Converted to markdown using Docling
-4. Split into semantic chunks
-5. Embedded using multilingual embeddings
-6. Stored in ChromaDB with metadata including file hash
-
+Add one or more PDF documents to the vector database with automatic duplicate detection and parallel processing. Features:
+1. **Automatic Duplicate Detection**: Uses BLAKE2b file hashing to skip already processed documents
+2. **Parallel Processing**: When multiple files are provided, they are processed concurrently using ThreadPoolExecutor (max 2 workers)
+3. **Document Processing Pipeline**: Documents are converted to markdown using Docling, split into semantic chunks, embedded using multilingual embeddings, and stored in ChromaDB with metadata including file hash
+4. **Force Re-adding**: Use `force_readd=True` to reprocess documents even if they already exist
 
 #### `query(query: str) -> str`
 Execute a query against the document collection:
@@ -322,6 +352,12 @@ Execute a query against the document collection:
 2. Uses LLM-based reranking for improved relevance
 3. Generates a response using the LLM with retrieved context
 4. Returns formatted answer with source attribution
+
+#### `query_stream(query: str) -> Iterator[str]`
+Execute a query against the document collection and return the result as a streaming iterator:
+1. Same retrieval process as `query()` method
+2. Returns streaming chunks for real-time response display
+3. Useful for web interfaces and chat applications
 
 #### `delete_collection(collection_name="rag")`
 Delete a collection from ChromaDB (useful for cleanup or reset).
@@ -333,7 +369,9 @@ The FastAPI backend provides an OpenAI-compatible API with automatic interactive
 - **Interactive API Documentation**: Available at http://localhost:8008/docs
 - **OpenAPI Schema**: Available at http://localhost:8008/openapi.json
 
-### Chat Completions
+### OpenAI-Compatible Endpoints
+
+#### Chat Completions
 ```bash
 curl -X POST http://localhost:8008/chat/completions \
   -H "Content-Type: application/json" \
@@ -344,9 +382,46 @@ curl -X POST http://localhost:8008/chat/completions \
   }'
 ```
 
-### List Models
+#### List Models
 ```bash
 curl http://localhost:8008/models
+```
+
+### Document Management Endpoints
+
+#### Paperless Integration - Full Load
+Triggers a background download and processing of all documents from your Paperless-ngx instance:
+```bash
+curl -X POST http://localhost:8008/paperless/full_load
+```
+
+**Response:**
+```json
+{
+  "status": "started",
+  "message": "Full load started in background"
+}
+```
+
+**Features:**
+- Downloads all documents from configured Paperless instance
+- Processes documents in parallel for improved performance
+- Runs in background thread to avoid blocking API
+- Automatically cleans up temporary files after processing
+- Comprehensive logging for monitoring progress
+
+#### Collection Management - Drop Collection
+Drops the entire ChromaDB collection (useful for reset or cleanup):
+```bash
+curl -X POST http://localhost:8008/chroma/drop_collection
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "ChromaDB collection dropped"
+}
 ```
 
 ## Configuration
@@ -397,19 +472,23 @@ The Document AI API supports the following environment variables:
 
 **Core Configuration:**
 - `EMBEDDING_SERVICE`: Embedding service provider (`alibaba`, `huggingface`)
-- `LLM_SERVICE`: Language model service (`qwen_remote`, `groq`)
+- `LLM_SERVICE`: Language model service (`qwen_remote`, `qwen_local`, `groq`)
 - `EMBEDDING_MODEL_NAME`: Name of the embedding model to use
 - `LLM_MODEL_NAME`: Name of the LLM model to use
 - `DOMAIN`: Domain URL for the application (e.g., `http://localhost:3000`)
 
 **Database Configuration:**
 - `CHROMA_HOST`: ChromaDB server hostname (default: `chroma`)
-- `CHROMA_PORT`: ChromaDB server port (default: `8008`)
+- `CHROMA_PORT`: ChromaDB server port (default: `8000`)
 
 **API Keys:**
 - `DASHSCOPE_API_KEY`: API key for Alibaba DashScope services
 - `HUGGINGFACE_API_KEY`: API key for HuggingFace services
 - `GROQ_API_KEY`: API key for Groq services
+
+**Paperless Integration:**
+- `PAPERLESS_API_URL`: URL to your Paperless-ngx API endpoint (e.g., `https://paperless.example.com/api/documents/`)
+- `PAPERLESS_API_TOKEN`: API token for authenticating with Paperless-ngx
 
 #### Model Configuration
 The system uses pre-built Docker images for easy deployment:
@@ -439,11 +518,13 @@ document-ai/
 ├── docker-compose.yml          # Complete system orchestration
 ├── docker-compose.user.yml     # User configuration template
 ├── Dockerfile                  # Document AI API container build (for development)
+├── Dockerfile.local            # Local GPU-enabled container build
 ├── app.py                     # FastAPI backend (OpenAI-compatible API)
 ├── pyproject.toml             # Python dependencies
+├── models.py                  # Pydantic models for API requests
 ├── ai_service/
-│   ├── main.py                # Main DocumentAI class
-│   ├── add_documents.py       # Document addition logic
+│   ├── main.py                # Main DocumentAI class with parallel processing
+│   ├── add_documents.py       # Document addition logic with duplicate detection
 │   ├── query_llm.py          # Query processing and LLM interaction
 │   ├── document_conversion/
 │   │   ├── docling_pdf_loader.py  # PDF loading with Docling
@@ -453,9 +534,17 @@ document-ai/
 │   │   ├── alibaba.py         # Alibaba embedding service
 │   │   └── embeddings.py      # Embedding abstraction
 │   ├── llm/
-│   │   └── model.py          # LLM configuration
+│   │   └── model.py          # LLM configuration and model providers
 │   └── utils/
+│       ├── hash_file.py       # BLAKE2b file hashing for duplicate detection
+│       ├── existence_check.py # Document existence validation
+│       ├── constants.py       # System constants and configuration
+│       ├── query.py          # Query utilities
 │       └── thinking_animation.py
+├── paperless_ingestion/
+│   └── PaperlessIngestion.py  # Paperless-ngx integration and document download
+└── scripts/
+    └── download_model.py      # Model download utilities
 ```
 
 **Note**: The system now uses a pre-built Docker image (`danitherex/document-ai-api:latest`) for the API service, making deployment faster and more reliable. The Dockerfile is included for development purposes if you need to build custom versions.
@@ -536,6 +625,27 @@ docker-compose logs -f openwebui                # Web interface
    - Verify no other services are using these ports
    - Ensure profile is correctly specified: `--profile remote` or `--profile local-gpu`
 
+7. **Paperless Integration Issues**:
+   - **Authentication errors**: Verify `PAPERLESS_API_TOKEN` is correctly set and has read permissions
+   - **Connection timeout**: Check `PAPERLESS_API_URL` is accessible from the container
+   - **SSL certificate issues**: For self-signed certificates, you may need to disable SSL verification
+   - **Rate limiting**: Large Paperless instances may rate-limit API requests
+   - **Network connectivity**: Ensure the container can reach your Paperless instance
+   
+   **Debug Paperless connection**:
+   ```bash
+   # Test API connectivity from container
+   docker exec -it document-ai-document-ai-api-1 curl -H "Authorization: Token YOUR_TOKEN" YOUR_PAPERLESS_URL
+   
+   # Check Paperless integration logs
+   docker-compose logs -f document-ai-api | grep -i paperless
+   ```
+
+8. **Parallel Processing Issues**:
+   - **Memory pressure**: Multiple concurrent document processing may consume significant memory
+   - **Thread contention**: Adjust `max_workers` in `ai_service/main.py` if experiencing performance issues
+   - **File system limits**: Ensure sufficient disk space for temporary files during processing
+
 ### Health Checks
 
 Check service status:
@@ -553,6 +663,12 @@ docker exec document-ai-document-ai-api-local-1 nvidia-smi  # GPU inside contain
 ```
 
 ### Performance Optimization
+
+**General Performance:**
+1. **Parallel Document Processing**: The system automatically uses parallel processing for multiple documents (max 2 workers by default)
+2. **Batch Processing**: When adding large numbers of documents, they are processed concurrently for improved throughput
+3. **Duplicate Detection**: BLAKE2b hashing prevents reprocessing of existing documents, saving computational resources
+4. **Paperless Integration**: Background processing ensures API responsiveness during bulk document operations
 
 **For Remote API Mode:**
 For better performance with large document collections:
