@@ -18,8 +18,8 @@ services:
   document-ai-api:
    image: danitherex/document-ai-api:latest
    profiles: ["remote"]
-   profiles: ["remote"]
    depends_on:
+     - chroma
      - chroma
    environment:
      - EMBEDDING_SERVICE=huggingface
