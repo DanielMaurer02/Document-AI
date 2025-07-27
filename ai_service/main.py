@@ -14,6 +14,8 @@ from ai_service.query_llm import invoke_query, invoke_query_stream
 from ai_service.utils.hash_file import blake2b_file
 import time
 import logging
+import concurrent.futures
+
 
 logging.basicConfig(level=logging.INFO)
 
@@ -72,19 +74,32 @@ class DocumentAI:
     def add_documents(
         self, file_path: str | list[str], force_readd: bool = False
     ) -> None:
-        """Add documents to the vectorstore with duplicate detection.
+        """Add documents to the vectorstore with duplicate detection, supporting parallel processing for multiple files.
 
         Args:
             file_path (str | list[str]): Path to a single document or list of paths to multiple documents.
             force_readd (bool): If True, will re-add documents even if they already exist. Defaults to False.
         """
+
         start_time = time.time()
 
-        if force_readd:
-            # Remove existing documents with same hash before adding
-            self._remove_duplicate_documents(file_path)
+        if isinstance(file_path, str):
+            file_paths = [file_path]
+        else:
+            file_paths = file_path
 
-        add_documents_to_chromadb(file_path, self.vectorstore)
+        if force_readd:
+            self._remove_duplicate_documents(file_paths)
+
+        def process_file(fp):
+            add_documents_to_chromadb(fp, self.vectorstore)
+
+        if len(file_paths) > 1:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+                list(executor.map(process_file, file_paths))
+        else:
+            process_file(file_paths[0])
+
         logging.info(f"Documents processed in {time.time() - start_time:.2f} seconds")
 
     def _remove_duplicate_documents(self, file_path: str | list[str]) -> None:

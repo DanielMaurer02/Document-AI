@@ -23,6 +23,10 @@ dependencies = [
 
 [project.optional-dependencies]
 build = [
-  # build‑time only – compiled with CUDA
-  "llama-cpp-python",
+    "llama-cpp-python"
+]
+
+[dependency-groups]
+build = [
+    "llama-cpp-python"
 ]
