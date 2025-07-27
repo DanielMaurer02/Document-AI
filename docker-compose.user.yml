@@ -3,8 +3,6 @@ services:
     image: chromadb/chroma:1.0.15
     volumes:
       - chroma_data:/data
-    ports:
-      - "8000:8000"
     networks:
       - internal
 
@@ -19,19 +17,20 @@ services:
 
   document-ai-api:
    image: danitherex/document-ai-api:latest
-   profiles:
-     - "remote"
+   profiles: ["remote"]
    depends_on:
      - chroma
    environment:
      - EMBEDDING_SERVICE=huggingface
-     - LLM_SERVICE=qwen
-     - DASHSCOPE_API_KEY=KEY
-     - HUGGINGFACE_API_KEY=KEY
+     - LLM_SERVICE=qwen_remote
+     - DASHSCOPE_API_KEY=DUMMY_API_KEY
+     - HUGGINGFACE_API_KEY=DUMMY_API_KEY
      #- GROQ_API_KEY=DUMMY_API_KEY
      - EMBEDDING_MODEL_NAME=Qwen/Qwen3-Embedding-0.6B
      - LLM_MODEL_NAME=qwen3-32b
      - DOMAIN=http://localhost:3000
+     - PAPERLESS_API_URL=https://DUMMY_DOMAIN/api/documents/
+     - PAPERLESS_API_TOKEN=DUMMY_API_TOKEN
 
      - CHROMA_HOST=chroma
      - CHROMA_PORT=8000
@@ -42,8 +41,7 @@ services:
 
 
   document-ai-api-local:
-    profiles: 
-      "local-gpu"
+    profiles: ["local-gpu"]
     build:
       context: .
       dockerfile: Dockerfile.local
@@ -61,11 +59,13 @@ services:
     environment:
      - EMBEDDING_SERVICE=huggingface
      - LLM_SERVICE=qwen_local
-     #- DASHSCOPE_API_KEY=KEY
-     - HUGGINGFACE_API_KEY=KEY
+     #- DASHSCOPE_API_KEY=DUMMY_API_KEY
+     - HUGGINGFACE_API_KEY=DUMMY_API_KEY
      #- GROQ_API_KEY=DUMMY_API_KEY
      - EMBEDDING_MODEL_NAME=Qwen/Qwen3-Embedding-0.6B
      - DOMAIN=http://localhost:3000
+     - PAPERLESS_API_URL=https://DUMMY_DOMAIN/api/documents/
+     - PAPERLESS_API_TOKEN=DUMMY_API_TOKEN
 
      - CHROMA_HOST=chroma
      - CHROMA_PORT=8000
@@ -84,4 +84,5 @@ networks:
 volumes:
   chroma_data:
   open-webui:
+  models:
 
