@@ -8,10 +8,10 @@ import chromadb
 from chromadb.config import Settings
 from langchain_chroma import Chroma
 
-from ai_service.embedding.embeddings import Embedding_Service, EmbeddingProvider
-from ai_service.add_documents import add_documents_to_chromadb
-from ai_service.query_llm import invoke_query, invoke_query_stream
-from ai_service.utils.hash_file import blake2b_file
+from services.ai_service.embedding.embeddings import Embedding_Service, EmbeddingProvider
+from services.ai_service.add_documents import add_documents_to_chromadb
+from services.ai_service.query_llm import invoke_query, invoke_query_stream
+from services.ai_service.utils.hash_file import blake2b_file
 import time
 import logging
 import concurrent.futures

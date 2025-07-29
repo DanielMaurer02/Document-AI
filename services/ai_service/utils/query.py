@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv
-from ai_service.llm.model import LLM, LLMProvider
+from services.ai_service.llm.model import LLM, LLMProvider
 import datetime
 from typing import Iterable
 

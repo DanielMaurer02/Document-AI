@@ -44,5 +44,7 @@ COPY --from=builder --chown=app:app /app /app
 ENV PATH="/app/.venv/bin:$PATH"
 WORKDIR /app
 
+# Create directory for database persistence
+RUN mkdir -p /app/data
 
 CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8008"]
