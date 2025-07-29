@@ -15,7 +15,7 @@ from sqlmodel import Session, select
 
 from services.ai_service.main import DocumentAI
 from services.paperless_ingestion.PaperlessIngestion import PaperlessIngestion
-from services.security_service.main import get_api_key, create_api_key, delete_key, get_db_session
+from services.security_service.main import get_api_key, create_api_key, delete_api_key_by_key, get_db_session, delete_initial_api_keys
 from services.db_service.main import Database
 
 logging.basicConfig(
@@ -230,7 +230,7 @@ def create_new_api_key(
         generated_key = str(uuid.uuid4())
         
         # Delete any initial keys when creating the first custom key
-        deleted_count = delete_key(session, is_initial=True)
+        deleted_count = delete_initial_api_keys(session)
         if deleted_count > 0:
             logging.info(f"Deleted {deleted_count} initial API key(s)")
         
@@ -257,10 +257,10 @@ def delete_api_key(
     api_key: str = Security(get_api_key),
     session: Session = Depends(get_db_session)
 ):
-    """Deactivate an API key."""
-    success = delete_key(session, key)
-    if success:
-        return {"status": "success", "message": "API key deactivated"}
+    """Delete an API key."""
+    success = delete_api_key_by_key(session, key)
+    if success > 0:
+        return {"status": "success", "message": "API key deleted successfully"}
     else:
         raise HTTPException(status_code=404, detail="API key not found")             
 

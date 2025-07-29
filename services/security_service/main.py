@@ -1,7 +1,7 @@
 from fastapi import HTTPException, Security, status, Depends
 from fastapi.security import APIKeyQuery, APIKeyHeader
 from sqlmodel import Session, select
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 import logging
 
@@ -33,7 +33,7 @@ def validate_api_key(key: str, session: Session) -> Optional[ApiKey]:
     
     if api_key:
         # Update last used timestamp
-        api_key.last_used_at = datetime.utcnow()
+        api_key.last_used_at = datetime.now(timezone.utc)
         session.add(api_key)
         session.commit()
         session.refresh(api_key)
@@ -87,19 +87,28 @@ def create_api_key(name: str, key: str, session: Session, is_initial: bool = Fal
     return api_key
 
 
-def delete_key(session: Session, api_key: str = "", is_initial: bool = False) -> int:
+def delete_api_key_by_key(session: Session, api_key: str) -> int:
     """Delete all initial API keys and return count of deleted keys."""
-    if is_initial:
-        statement = select(ApiKey).where(ApiKey.is_initial == True)
-    else:
-        statement = select(ApiKey).where(ApiKey.key == api_key)
-    initial_keys = session.exec(statement).all()
-    logger.info(f"Deleting {len(initial_keys)} initial API key(s) with key: {api_key}")
-    
-    count = len(initial_keys)
-    for key in initial_keys:
+    statement = select(ApiKey).where(ApiKey.key == api_key)
+    keys_to_delete = session.exec(statement).all()
+    logger.info(f"Deleting {len(keys_to_delete)} initial API key(s) with key: {api_key}")
+
+    count = len(keys_to_delete)
+    for key in keys_to_delete:
         session.delete(key)
     
     session.commit()
     return count
 
+def delete_initial_api_keys(session: Session) -> int:
+    """Delete all initial API keys and return count of deleted keys."""
+    statement = select(ApiKey).where(ApiKey.is_initial == True)
+    initial_keys = session.exec(statement).all()
+    logger.info(f"Deleting {len(initial_keys)} initial API key(s)")
+
+    count = len(initial_keys)
+    for key in initial_keys:
+        session.delete(key)
+
+    session.commit()
+    return count
