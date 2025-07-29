@@ -2,7 +2,8 @@ import os
 from typing import Iterator
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import math
-
+import time
+import logging
 from dotenv import load_dotenv
 import chromadb
 
@@ -13,8 +14,6 @@ from services.ai_service.embedding.embeddings import Embedding_Service, Embeddin
 from services.ai_service.add_documents import add_documents_to_chromadb
 from services.ai_service.query_llm import invoke_query, invoke_query_stream
 from services.ai_service.utils.hash_file import blake2b_file
-import time
-import logging
 
 
 logging.basicConfig(level=logging.INFO)

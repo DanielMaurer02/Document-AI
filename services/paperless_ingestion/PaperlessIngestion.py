@@ -58,7 +58,7 @@ class PaperlessIngestion:
         """Fetch all documents from the Paperless API."""
         headers = {"Authorization": f"Token {self.paperless_token}"}
         docs = []
-        url = self.paperless_api_url+"/"
+        url = f"{self.paperless_api_url}/"
 
         logger.info("Fetching documents from Paperless API...")
         while url:
@@ -79,14 +79,9 @@ class PaperlessIngestion:
         try:
             response = requests.get(download_url, headers=headers, stream=True)
             response.raise_for_status()
-            
-            # Create safe filename
-            safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-            # Replace spaces with underscores for better file handling
-            safe_filename = safe_filename.replace(' ', '_')
-            if not safe_filename:
-                safe_filename = f"document_{document_id}"
-            
+
+            # Ensure the filename is safe for the filesystem
+            safe_filename = self._sanitize_filename(filename)
             # Ensure we have a file extension
             if not Path(safe_filename).suffix:
                 safe_filename += ".pdf"  # Default to PDF
@@ -126,9 +121,12 @@ class PaperlessIngestion:
 
     def download_specific_document(self, document_id: int, title: str) -> dict[str, str]:
         """Download a specific document to a temporary directory."""
-        safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
-        # Replace spaces with underscores for better file handling
-        safe_title = safe_title.replace(' ', '_')
+        safe_title = self._sanitize_filename(title)
         self._download_document(document_id, safe_title, self.temp_dir)
         return self.downloaded_files
-
+    
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitize filename to ensure it is safe for file systems."""
+        safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+        safe_filename = safe_filename.replace(' ', '_')
+        return safe_filename
