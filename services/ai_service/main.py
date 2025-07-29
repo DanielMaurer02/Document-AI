@@ -1,6 +1,7 @@
 import os
 from typing import Iterator
-from unittest import result
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import math
 
 from dotenv import load_dotenv
 import chromadb
@@ -14,7 +15,6 @@ from services.ai_service.query_llm import invoke_query, invoke_query_stream
 from services.ai_service.utils.hash_file import blake2b_file
 import time
 import logging
-import concurrent.futures
 
 
 logging.basicConfig(level=logging.INFO)
@@ -62,45 +62,115 @@ class DocumentAI:
         )
         return vectorstore
 
-    def delete_collection(self, collection_name: str = "rag"):
-        """Delete a collection from ChromaDB.
+    def reset_collection(self, collection_name: str = "rag"):
+        """Reset a collection in ChromaDB.
 
         Args:
-            collection_name (str): The name of the collection to delete. Defaults to "rag".
+            collection_name (str): The name of the collection to reset. Defaults to "rag".
         """
         self.persistent_client.delete_collection(collection_name)
+        self.vectorstore = self.__get_vectorstore(collection_name)
+        logging.info(f"Collection '{collection_name}' reset successfully.")
+
+    def _split_files_into_batches(self, file_path: dict[str, str], num_workers: int = 3) -> list[dict[str, str]]:
+        """Split the file dictionary into batches for parallel processing.
+
+        Args:
+            file_path (dict[str, str]): Dictionary of files to process
+            num_workers (int): Number of worker batches to create
+
+        Returns:
+            list[dict[str, str]]: List of file dictionaries, one per worker
+        """
+        items = list(file_path.items())
+        batch_size = math.ceil(len(items) / num_workers)
+        
+        batches = []
+        for i in range(0, len(items), batch_size):
+            batch = dict(items[i:i + batch_size])
+            if batch:  # Only add non-empty batches
+                batches.append(batch)
+        
+        return batches
+
+    def _process_batch(self, batch: dict[str, str]) -> tuple[bool, str]:
+        """Process a batch of files in a single worker.
+
+        Args:
+            batch (dict[str, str]): Dictionary of files to process
+
+        Returns:
+            tuple[bool, str]: Success status and message
+        """
+        try:
+            add_documents_to_chromadb(batch, self.vectorstore)
+            return True, f"Successfully processed {len(batch)} files"
+        except Exception as e:
+            return False, f"Error processing batch: {str(e)}"
+
 
     # TODO: Add similarity-based duplicate detection as a second step (hash-based detection implemented)
     def add_documents(
-        self, file_path: str | list[str], force_readd: bool = False
+        self, file_path: dict[str, str], force_readd: bool = False, num_workers: int = 3
     ) -> None:
         """Add documents to the vectorstore with duplicate detection, supporting parallel processing for multiple files.
 
         Args:
-            file_path (str | list[str]): Path to a single document or list of paths to multiple documents.
+            file_path (dict[str, str]): Dictionary where key is the file path and value is the file URL on the server.
             force_readd (bool): If True, will re-add documents even if they already exist. Defaults to False.
         """
 
         start_time = time.time()
 
-        if isinstance(file_path, str):
-            file_paths = [file_path]
-        else:
-            file_paths = file_path
-
+    
         if force_readd:
-            self._remove_duplicate_documents(file_paths)
+            self._remove_duplicate_documents(list(file_path.keys()))
 
-        def process_file(fp):
-            add_documents_to_chromadb(fp, self.vectorstore)
+        # Split files into batches for parallel processing
+        batches = self._split_files_into_batches(file_path, num_workers)
 
-        if len(file_paths) > 1:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
-                list(executor.map(process_file, file_paths))
+
+        if len(batches) == 1:
+            # If only one batch, process directly without threading overhead
+            success, message = self._process_batch(batches[0])
+            if success:
+                logging.info(message)
+            else:
+                logging.error(message)
         else:
-            process_file(file_paths[0])
+            # Process batches in parallel
+            successful_batches = 0
+            failed_batches = 0
+            
+            with ThreadPoolExecutor(max_workers=num_workers) as executor:
+                # Submit all batches to the executor
+                future_to_batch = {
+                    executor.submit(self._process_batch, batch): i 
+                    for i, batch in enumerate(batches)
+                }
+                
+                # Process completed futures
+                for future in as_completed(future_to_batch):
+                    batch_index = future_to_batch[future]
+                    try:
+                        success, message = future.result()
+                        if success:
+                            successful_batches += 1
+                            logging.info(f"Worker {batch_index + 1}: {message}")
+                        else:
+                            failed_batches += 1
+                            logging.error(f"Worker {batch_index + 1}: {message}")
+                    except Exception as e:
+                        failed_batches += 1
+                        logging.error(f"Worker {batch_index + 1}: Unexpected error: {str(e)}")
 
-        logging.info(f"Documents processed in {time.time() - start_time:.2f} seconds")
+            # Log final results
+            total_files = len(file_path)
+            logging.info(
+                f"Parallel processing completed: {successful_batches} successful batches, "
+                f"{failed_batches} failed batches, "
+                f"{total_files} total files processed in {time.time() - start_time:.2f} seconds"
+            )
 
     def _remove_duplicate_documents(self, file_path: str | list[str]) -> None:
         """Remove documents from vectorstore that have the same hash as the provided files.

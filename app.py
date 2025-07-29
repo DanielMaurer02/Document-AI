@@ -4,7 +4,7 @@ import os
 import time
 import uuid
 from typing import Iterable, List
-from models import ChatCompletionRequest, ApiKey, ApiKeyResponse
+from models import ChatCompletionRequest, ApiKey, ApiKeyResponse, PaperlessWebhookPayload
 import threading
 
 from dotenv import load_dotenv
@@ -174,9 +174,8 @@ def full_load_paperless(api_key: str = Security(get_api_key)):
         downloaded_files = paperless_ingest.download_all_documents()
         if downloaded_files:
             logging.info(f"Successfully downloaded {len(downloaded_files)} documents")
-            for downloaded_file in downloaded_files:
-                if doc_ai.vectorstore:
-                    doc_ai.add_documents([downloaded_file])
+            if doc_ai.vectorstore:
+                doc_ai.add_documents(downloaded_files)
             paperless_ingest.cleanup_downloaded_files()
             logging.info("All documents processed with AI service")
         else:
@@ -185,15 +184,77 @@ def full_load_paperless(api_key: str = Security(get_api_key)):
     threading.Thread(target=background_task, daemon=True).start()
     return {"status": "started", "message": "Full load started in background"}
 
-#TODO: Webhook endpoint for paperless
+@app.post("/webhook/paperless")
+def paperless_webhook(payload: PaperlessWebhookPayload, api_key: str = Security(get_api_key)):
+    """Webhook endpoint for Paperless NGX workflow actions."""
+    logging.info("Received Paperless NGX webhook")
+    logging.info(f"Webhook payload: {payload.model_dump()}")
+    
+    try:
+        # Process the webhook based on the trigger type
+        if payload.trigger_type == "added" and payload.document_id:
+            # Document was added - we could download and process it
+            logging.info(f"Document added: ID={payload.document_id}, Title={payload.title}")
+            
+            def background_download():
+                try:
+                    # Download the specific document
+                    if payload.document_id:
+                        downloaded_files = paperless_ingest.download_specific_document(
+                            payload.document_id, title=payload.title or f"document_{payload.document_id}"
+                        )
+                        
+                        if downloaded_files:
+                            logging.info(f"Downloaded document {payload.document_id} via webhook")
+                            
+                            # Add to AI service if vectorstore is available
+                            if doc_ai.vectorstore:
+                                doc_ai.add_documents(downloaded_files)
+                                logging.info(f"Added document {payload.document_id} to vector store")
+                            
+                            # Cleanup downloaded files
+                            paperless_ingest.cleanup_downloaded_files()
+                            
+                except Exception as e:
+                    logging.error(f"Error processing webhook document {payload.document_id}: {e}")
+            
+            # Process in background to avoid blocking the webhook response
+            threading.Thread(target=background_download, daemon=True).start()
+            
+        elif payload.trigger_type == "updated" and payload.document_id:
+            # Document was updated - we might want to re-process it
+            logging.info(f"Document updated: ID={payload.document_id}, Title={payload.title}")
+            # For now, just log it. In the future, we could re-download and update the vector store
+            
+        elif payload.trigger_type == "consumption_started":
+            # Document consumption started - early stage processing
+            logging.info(f"Document consumption started: {payload.original_filename}")
+            
+        else:
+            logging.info(f"Received webhook with trigger_type: {payload.trigger_type}")
+        
+        return {
+            "status": "success", 
+            "message": "Webhook processed successfully",
+            "document_id": payload.document_id,
+            "trigger_type": payload.trigger_type
+        }
+        
+    except Exception as e:
+        logging.error(f"Error processing Paperless webhook: {e}")
+        return {
+            "status": "error",
+            "message": f"Error processing webhook: {str(e)}"
+        }
 
-@app.delete("/chroma/drop_collection")
-def drop_collection(api_key: str = Security(get_api_key)):
-    """Drop the ChromaDB collection."""
-    logging.info("Dropping ChromaDB collection")
-    doc_ai.delete_collection()
-    logging.info("ChromaDB collection dropped successfully")
-    return {"status": "success", "message": "ChromaDB collection dropped"}
+
+@app.delete("/chroma/reset_collection")
+def reset_chroma_collection(api_key: str = Security(get_api_key)):
+    """Reset the ChromaDB collection."""
+    logging.info("Resetting ChromaDB collection")
+    doc_ai.reset_collection()
+    logging.info("ChromaDB collection reset successfully")
+    return {"status": "success", "message": "ChromaDB collection reset"}
 
 # API Key Management Endpoints
 @app.get("/api-keys", response_model=List[ApiKeyResponse])

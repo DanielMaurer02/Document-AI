@@ -16,9 +16,9 @@ class PaperlessIngestion:
     def __init__(self):
         """Initialize the Paperless Ingestion class."""
         # Track downloaded files for cleanup
-        self.downloaded_files: List[str] = []
+        self.downloaded_files: dict[str, str] = {}
         self.failures: List[str] = []
-        self.paperless_api_url = os.getenv("PAPERLESS_API_URL", "")
+        self.paperless_api_url = self._remove_trailing_slash(os.getenv("PAPERLESS_API_URL", ""))
         if not self.paperless_api_url:
             logger.error("PAPERLESS_API_URL environment variable is not set.")
             raise ValueError("PAPERLESS_API_URL environment variable is required.")
@@ -30,6 +30,10 @@ class PaperlessIngestion:
         self.temp_dir = os.path.join(os.getcwd(), "paperless_temp")
         os.makedirs(self.temp_dir, exist_ok=True)
         logger.info(f"Created temporary directory: {self.temp_dir}")
+
+    def _remove_trailing_slash(self, url: str) -> str:
+        """Remove trailing slash from URL if it exists."""
+        return url.rstrip('/')
 
 
     def cleanup_downloaded_files(self):
@@ -54,7 +58,7 @@ class PaperlessIngestion:
         """Fetch all documents from the Paperless API."""
         headers = {"Authorization": f"Token {self.paperless_token}"}
         docs = []
-        url = self.paperless_api_url
+        url = self.paperless_api_url+"/"
 
         logger.info("Fetching documents from Paperless API...")
         while url:
@@ -78,6 +82,8 @@ class PaperlessIngestion:
             
             # Create safe filename
             safe_filename = "".join(c for c in filename if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+            # Replace spaces with underscores for better file handling
+            safe_filename = safe_filename.replace(' ', '_')
             if not safe_filename:
                 safe_filename = f"document_{document_id}"
             
@@ -92,33 +98,37 @@ class PaperlessIngestion:
                     if chunk:
                         f.write(chunk)
 
-            self.downloaded_files.append(temp_file_path)
+            self.downloaded_files[temp_file_path] = download_url
             logger.info(f"Downloaded: {safe_filename}")
             
         except requests.RequestException as e:
             logger.error(f"Error downloading document {document_id}: {e}")
             self.failures.append(download_url)
 
-    def download_all_documents(self) -> List[str]:
+    def download_all_documents(self) -> dict[str, str]:
         """Download all documents to a temporary directory."""
         docs = self.get_all_documents()
-        
+
         for document in docs:
             document_id = document['id']
-            title = document['title']
+            title = document['archived_file_name']
             
             logger.info(f"Processing document {document_id}: {title}")
             
             # Download document temporarily
             self._download_document(document_id, title, self.temp_dir)
 
+
         logger.info(f"Successfully downloaded {len(self.downloaded_files)} documents")
         if self.failures:
             logger.warning(f"Failed to download {len(self.failures)} documents: {self.failures}")
         return self.downloaded_files
 
-    def download_specific_document(self, document_id: int, title: str) -> List[str]:
+    def download_specific_document(self, document_id: int, title: str) -> dict[str, str]:
         """Download a specific document to a temporary directory."""
-        self._download_document(document_id, title, self.temp_dir)
+        safe_title = "".join(c for c in title if c.isalnum() or c in (' ', '-', '_', '.')).rstrip()
+        # Replace spaces with underscores for better file handling
+        safe_title = safe_title.replace(' ', '_')
+        self._download_document(document_id, safe_title, self.temp_dir)
         return self.downloaded_files
 

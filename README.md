@@ -12,7 +12,7 @@ A powerful document AI system that combines ChromaDB vector database with advanc
 - **Document Compression**: Uses LLM-based reranking for improved retrieval quality
 - **Source Attribution**: Provides source file paths and chunk information for transparency
 - **Multilingual Support**: Uses `text-embedding-v3` embeddings for multiple languages
-- **Paperless Integration**: Seamless integration with Paperless-ngx document management system
+- **Paperless Integration**: Seamless integration with Paperless-ngx document management system via API and webhook support
 - **Parallel Processing**: Multi-threaded document processing for improved performance with multiple files
 - **Automated Collection Management**: API endpoints for managing document collections and triggering bulk operations
 
@@ -413,7 +413,7 @@ curl -X POST http://localhost:8008/paperless/full_load
 #### Collection Management - Drop Collection
 Drops the entire ChromaDB collection (useful for reset or cleanup):
 ```bash
-curl -X POST http://localhost:8008/chroma/drop_collection
+curl -X DELETE http://localhost:8008/chroma/reset_collection
 ```
 
 **Response:**
@@ -423,6 +423,84 @@ curl -X POST http://localhost:8008/chroma/drop_collection
   "message": "ChromaDB collection dropped"
 }
 ```
+
+#### Paperless NGX Webhook Endpoint
+Receives webhook notifications from Paperless NGX workflow actions to automatically process new or updated documents:
+
+```bash
+curl -X POST http://localhost:8008/webhook/paperless \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer YOUR_API_KEY" \
+  -d '{
+    "document_id": 123,
+    "document_url": "https://paperless.example.com/documents/123",
+    "title": "Important Document",
+    "trigger_type": "added",
+    "correspondent": "Example Corp",
+    "document_type": "Invoice",
+    "tags": ["business", "2024"],
+    "created": "2024-01-15T10:30:00Z",
+    "added": "2024-01-15T10:30:00Z",
+    "original_filename": "invoice_123.pdf"
+  }'
+```
+
+**Response:**
+```json
+{
+  "status": "success",
+  "message": "Webhook processed successfully",
+  "document_id": 123,
+  "trigger_type": "added"
+}
+```
+
+**Features:**
+- Automatically downloads and processes documents when they're added to Paperless NGX
+- Supports all Paperless NGX workflow trigger types: `added`, `updated`, `consumption_started`
+- Processes documents in background thread to avoid blocking webhook response
+- Automatically fetches document metadata if not provided in webhook payload
+- Comprehensive error handling and logging
+- Requires API key authentication
+
+**Setting up the Webhook in Paperless NGX:**
+
+1. **Create a Workflow in Paperless NGX:**
+   - Go to Settings > Workflows in your Paperless NGX instance
+   - Click "Add Workflow"
+   - Configure the trigger (e.g., "Document Added")
+   - Add filters as needed (optional)
+
+2. **Add Webhook Action:**
+   - In the workflow, add a "Webhook" action
+   - Set URL to: `http://your-document-ai-host:8008/webhook/paperless`
+   - Set request body encoding to "JSON"
+   - Configure the request body with document placeholders:
+
+```json
+{
+  "document_id": "{id}",
+  "document_url": "{doc_url}",
+  "title": "{title}",
+  "trigger_type": "added",
+  "correspondent": "{correspondent}",
+  "document_type": "{document_type}",
+  "tags": ["{tags}"],
+  "created": "{created}",
+  "added": "{added}",
+  "original_filename": "{original_filename}"
+}
+```
+
+3. **Add Authentication Header:**
+   - Add a header with key: `Authorization`
+   - Set value to: `Bearer YOUR_API_KEY`
+   - Replace `YOUR_API_KEY` with your actual Document AI API key
+
+4. **Save and Test:**
+   - Save the workflow
+   - Test by adding a new document to Paperless NGX
+   - Check Document AI logs to verify webhook processing
 
 ## Configuration
 
