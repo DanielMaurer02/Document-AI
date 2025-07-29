@@ -16,3 +16,5 @@ wheels/
 
 
 docker-compose.yml
+
+database.db

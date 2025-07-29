@@ -6,8 +6,8 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import LLMListwiseRerank
 
-from ai_service.utils.thinking_animation import ThinkingAnimation
-from ai_service.utils.query import (
+from services.ai_service.utils.thinking_animation import ThinkingAnimation
+from services.ai_service.utils.query import (
     get_llm,
     generate_prompt,
     format_docs,

@@ -20,7 +20,6 @@ services:
    profiles: ["remote"]
    depends_on:
      - chroma
-     - chroma
    environment:
      - EMBEDDING_SERVICE=huggingface
      - LLM_SERVICE=qwen_remote

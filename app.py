@@ -3,17 +3,20 @@ import logging
 import os
 import time
 import uuid
-from typing import Iterable
-from models import ChatCompletionRequest
+from typing import Iterable, List
+from models import ChatCompletionRequest, ApiKey, ApiKeyResponse
 import threading
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Security, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from sqlmodel import Session, select
 
-from ai_service.main import DocumentAI
-from paperless_ingestion.PaperlessIngestion import PaperlessIngestion
+from services.ai_service.main import DocumentAI
+from services.paperless_ingestion.PaperlessIngestion import PaperlessIngestion
+from services.security_service.main import get_api_key, create_api_key, delete_api_key_by_key, get_db_session, delete_initial_api_keys
+from services.db_service.main import Database
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -25,6 +28,9 @@ DOMAIN: str = os.getenv("DOMAIN", "http://localhost:3000")
 MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "qwen3-32b")
 MODEL_ID: str = f"{MODEL_NAME}-rag"
 
+
+
+
 app = FastAPI(title="OpenAI‑compatible API")
 
 app.add_middleware(
@@ -34,6 +40,35 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Initialize database and create initial API key on startup
+db = Database()
+
+def init_initial_api_key():
+    """Create an initial API key if no keys exist."""
+    with Session(db._engine) as session:
+        # Check if any API keys exist
+        statement = select(ApiKey)
+        existing_keys = session.exec(statement).first()
+        
+        if not existing_keys:
+            # Create initial API key
+            initial_key = str(uuid.uuid4())
+            create_api_key("Initial Key", initial_key, session, is_initial=True)
+            
+            print("=" * 80)
+            print("🔑 INITIAL API KEY CREATED")
+            print("=" * 80)
+            print(f"API Key: {initial_key}")
+            print("This key will be automatically deleted when you create your first custom API key.")
+            print("Please save this key and use it to authenticate your first requests.")
+            print("=" * 80)
+            
+            logging.info("Created initial API key: %s", initial_key)
+
+# Initialize initial key on startup
+init_initial_api_key()
+
 
 
 
@@ -87,7 +122,7 @@ def _chat_stream_generator(prompt: str) -> Iterable[str]:
 
 # TODO: Save answers from llm for session (are being returned in message object)
 @app.post("/chat/completions")
-async def chat_completions(request: ChatCompletionRequest):
+async def chat_completions(request: ChatCompletionRequest, api_key: str = Security(get_api_key)):
     """OpenAI‑compatible chat endpoint."""
     logging.info("Received chat completion request: %s", request.as_dict())
 
@@ -117,7 +152,7 @@ async def chat_completions(request: ChatCompletionRequest):
 
 @app.get("/engines", include_in_schema=False)
 @app.get("/models")
-async def list_models():
+async def list_models(api_key: str = Security(get_api_key)):
     """Return the single RAG model supported by this server."""
     return {
         "data": [
@@ -132,7 +167,7 @@ async def list_models():
         ]
     }
 @app.post("/paperless/full_load")
-def full_load_paperless():
+def full_load_paperless(api_key: str = Security(get_api_key)):
     """Trigger background download and processing of all Paperless documents."""
     def background_task():
         logging.info("Starting full load of Paperless documents")
@@ -150,13 +185,84 @@ def full_load_paperless():
     threading.Thread(target=background_task, daemon=True).start()
     return {"status": "started", "message": "Full load started in background"}
 
-@app.post("/chroma/drop_collection")
-def drop_collection():
+#TODO: Webhook endpoint for paperless
+
+@app.delete("/chroma/drop_collection")
+def drop_collection(api_key: str = Security(get_api_key)):
     """Drop the ChromaDB collection."""
     logging.info("Dropping ChromaDB collection")
     doc_ai.delete_collection()
     logging.info("ChromaDB collection dropped successfully")
-    return {"status": "success", "message": "ChromaDB collection dropped"}             
+    return {"status": "success", "message": "ChromaDB collection dropped"}
+
+# API Key Management Endpoints
+@app.get("/api-keys", response_model=List[ApiKeyResponse])
+def list_api_keys(
+    api_key: str = Security(get_api_key),
+    session: Session = Depends(get_db_session)
+):
+    """List all API keys."""
+    statement = select(ApiKey)
+    api_keys = session.exec(statement).all()
+    
+    return [
+        ApiKeyResponse(
+            id=key.id,
+            name=key.name,
+            key=key.key,
+            is_active=key.is_active,
+            is_initial=key.is_initial,
+            created_at=key.created_at.isoformat(),
+            last_used_at=key.last_used_at.isoformat() if key.last_used_at else None
+        )
+        for key in api_keys
+    ]
+
+@app.post("/api-keys", response_model=ApiKeyResponse)
+def create_new_api_key(
+    api_key_name: str,
+    api_key: str = Security(get_api_key),
+    session: Session = Depends(get_db_session)
+):
+    """Create a new API key."""
+    try:
+        # Generate a new API key
+        generated_key = str(uuid.uuid4())
+        
+        # Delete any initial keys when creating the first custom key
+        deleted_count = delete_initial_api_keys(session)
+        if deleted_count > 0:
+            logging.info(f"Deleted {deleted_count} initial API key(s)")
+        
+        # Create the new API key
+        new_key = create_api_key(api_key_name, generated_key, session, is_initial=False)
+
+        return ApiKeyResponse(
+            id=new_key.id,
+            name=new_key.name,
+            key=new_key.key,
+            is_active=new_key.is_active,
+            is_initial=new_key.is_initial,
+            created_at=new_key.created_at.isoformat(),
+            last_used_at=new_key.last_used_at.isoformat() if new_key.last_used_at else None
+        )
+    except Exception as e:
+        if "UNIQUE constraint failed" in str(e):
+            raise HTTPException(status_code=400, detail="API key already exists")
+        raise HTTPException(status_code=400, detail=str(e))
+
+@app.delete("/api-keys/{key}")
+def delete_api_key(
+    key: str,
+    api_key: str = Security(get_api_key),
+    session: Session = Depends(get_db_session)
+):
+    """Delete an API key."""
+    success = delete_api_key_by_key(session, key)
+    if success > 0:
+        return {"status": "success", "message": "API key deleted successfully"}
+    else:
+        raise HTTPException(status_code=404, detail="API key not found")             
 
 if __name__ == "__main__":
     import uvicorn
