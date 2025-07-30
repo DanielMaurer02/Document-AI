@@ -8,7 +8,7 @@ from models import ChatCompletionRequest, ApiKey, ApiKeyResponse, PaperlessWebho
 import threading
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Security, Depends, HTTPException
+from fastapi import FastAPI, Security, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from sqlmodel import Session, select
@@ -27,15 +27,21 @@ load_dotenv()
 DOMAIN: str = os.getenv("DOMAIN", "http://localhost:3000")
 MODEL_NAME: str = os.getenv("LLM_MODEL_NAME", "qwen3-32b")
 MODEL_ID: str = f"{MODEL_NAME}-rag"
+PAPERLESS_URL: str = os.getenv("PAPERLESS_API_URL", "http://localhost:8000")
 
 
 
 
 app = FastAPI(title="OpenAI‑compatible API")
 
+# Configure CORS - allow Paperless NGX and frontend domains
+allowed_origins = [DOMAIN]
+if PAPERLESS_URL and PAPERLESS_URL not in allowed_origins:
+    allowed_origins.append(PAPERLESS_URL)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[DOMAIN],
+    allow_origins=allowed_origins + ["*"],  # Allow all origins for webhooks
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -185,67 +191,79 @@ def full_load_paperless(api_key: str = Security(get_api_key)):
     return {"status": "started", "message": "Full load started in background"}
 
 @app.post("/webhook/paperless")
-def paperless_webhook(payload: PaperlessWebhookPayload, api_key: str = Security(get_api_key)):
+async def paperless_webhook(request: Request, api_key: str = Security(get_api_key)):
     """Webhook endpoint for Paperless NGX workflow actions."""
     logging.info("Received Paperless NGX webhook")
-    logging.info(f"Webhook payload: {payload.model_dump()}")
     
     try:
-        # Process the webhook based on the trigger type
-        if payload.trigger_type == "added" and payload.document_id:
-            # Document was added - we could download and process it
-            logging.info(f"Document added: ID={payload.document_id}, Title={payload.title}")
-            
-            def background_download():
-                try:
-                    # Download the specific document
-                    if payload.document_id:
-                        downloaded_files = paperless_ingest.download_specific_document(
-                            payload.document_id, title=payload.title or f"document_{payload.document_id}"
-                        )
-                        
-                        if downloaded_files:
-                            logging.info(f"Downloaded document {payload.document_id} via webhook")
-                            
-                            # Add to AI service if vectorstore is available
-                            if doc_ai.vectorstore:
-                                doc_ai.add_documents(downloaded_files)
-                                logging.info(f"Added document {payload.document_id} to vector store")
-                            
-                            # Cleanup downloaded files
-                            paperless_ingest.cleanup_downloaded_files()
-                            
-                except Exception as e:
-                    logging.error(f"Error processing webhook document {payload.document_id}: {e}")
-            
-            # Process in background to avoid blocking the webhook response
-            threading.Thread(target=background_download, daemon=True).start()
-            
-        elif payload.trigger_type == "updated" and payload.document_id:
-            # Document was updated - we might want to re-process it
-            logging.info(f"Document updated: ID={payload.document_id}, Title={payload.title}")
-            # For now, just log it. In the future, we could re-download and update the vector store
-            
-        elif payload.trigger_type == "consumption_started":
-            # Document consumption started - early stage processing
-            logging.info(f"Document consumption started: {payload.original_filename}")
-            
-        else:
-            logging.info(f"Received webhook with trigger_type: {payload.trigger_type}")
+        # Read the raw body
+        body = await request.body()
+        body_str = body.decode('utf-8') if body else ''
         
+        logging.info(f"Raw webhook body: {body_str}")
+        
+        # Parse JSON manually
+        if body_str:
+            try:
+                json_data = json.loads(body_str)
+                logging.info(f"Parsed JSON data: {json_data}")
+                
+                # Create payload object from JSON
+                payload = PaperlessWebhookPayload(**json_data)
+                logging.info(f"Created payload object: {payload.model_dump()}")
+                
+            except json.JSONDecodeError as e:
+                logging.error(f"Failed to parse JSON: {e}")
+                return {"status": "error", "message": f"Invalid JSON: {str(e)}"}
+            except Exception as e:
+                logging.error(f"Failed to create payload object: {e}")
+                return {"status": "error", "message": f"Invalid payload format: {str(e)}"}
+        else:
+            logging.warning("Empty request body received")
+            return {"status": "error", "message": "Empty request body"}
+            
+    except Exception as e:
+        logging.error(f"Error reading request body: {e}")
+        return {"status": "error", "message": f"Error reading request: {str(e)}"}
+    
+    try:
+        logging.info(f"Document added: url={payload.document_url}, Title={payload.filename}")
+
+        def background_download():
+            try:
+                # Download the specific document
+                if payload.document_url:
+                    title  = f"{payload.original_filename or f'document_{uuid.uuid4()}'}.pdf"
+                    downloaded_files = paperless_ingest.download_specific_document(
+                        payload.document_url, title=title
+                    )
+                    
+                    if downloaded_files:
+                        logging.info(f"Downloaded document {payload.document_url} via webhook")
+
+                        # Add to AI service if vectorstore is available
+                        if doc_ai.vectorstore:
+                            doc_ai.add_documents(downloaded_files)
+                            logging.info(f"Added document {payload.document_url} to vector store")
+
+                        # Cleanup downloaded files
+                        paperless_ingest.cleanup_downloaded_files()
+                        
+            except Exception as e:
+                logging.error(f"Error processing webhook document {payload.document_url}: {e}")
+
+        # Process in background to avoid blocking the webhook response
+        threading.Thread(target=background_download, daemon=True).start()
+            
         return {
             "status": "success", 
             "message": "Webhook processed successfully",
-            "document_id": payload.document_id,
-            "trigger_type": payload.trigger_type
+            "document_url": payload.document_url,
+            "filename": payload.filename
         }
-        
     except Exception as e:
-        logging.error(f"Error processing Paperless webhook: {e}")
-        return {
-            "status": "error",
-            "message": f"Error processing webhook: {str(e)}"
-        }
+        logging.error(f"Error processing webhook: {e}")
+        return {"status": "error", "message": f"Error processing webhook: {str(e)}"}
 
 
 @app.delete("/chroma/reset_collection")

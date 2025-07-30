@@ -73,11 +73,11 @@ class PaperlessIngestion:
 
     def _download_document(self, document_id: int, filename: str, temp_dir: str) -> None:
         """Download a document temporarily to local storage."""
+        document_url = f"{self.paperless_api_url}/{document_id}/download/"
         headers = {"Authorization": f"Token {self.paperless_token}"}
-        download_url = f"{self.paperless_api_url}/{document_id}/download/"
-        logger.info(f"Downloading document {document_id} from {download_url}")
+        logger.info(f"Downloading document from {document_url}")
         try:
-            response = requests.get(download_url, headers=headers, stream=True)
+            response = requests.get(document_url, headers=headers, stream=True)
             response.raise_for_status()
 
             # Ensure the filename is safe for the filesystem
@@ -93,12 +93,12 @@ class PaperlessIngestion:
                     if chunk:
                         f.write(chunk)
 
-            self.downloaded_files[temp_file_path] = download_url
+            self.downloaded_files[temp_file_path] = document_url
             logger.info(f"Downloaded: {safe_filename}")
             
         except requests.RequestException as e:
-            logger.error(f"Error downloading document {document_id}: {e}")
-            self.failures.append(download_url)
+            logger.error(f"Error downloading document {document_url}: {e}")
+            self.failures.append(document_url)
 
     def download_all_documents(self) -> dict[str, str]:
         """Download all documents to a temporary directory."""
@@ -107,7 +107,7 @@ class PaperlessIngestion:
         for document in docs:
             document_id = document['id']
             title = document['archived_file_name']
-            
+
             logger.info(f"Processing document {document_id}: {title}")
             
             # Download document temporarily
@@ -119,8 +119,16 @@ class PaperlessIngestion:
             logger.warning(f"Failed to download {len(self.failures)} documents: {self.failures}")
         return self.downloaded_files
 
-    def download_specific_document(self, document_id: int, title: str) -> dict[str, str]:
+    def download_specific_document(self, document_url: str, title: str) -> dict[str, str]:
         """Download a specific document to a temporary directory."""
+        # Extract document ID from URL like "https://paperless.maurer-daniel.de/documents/184/"
+        import re
+        match = re.search(r'/documents/(\d+)/?$', document_url)
+        if match:
+            document_id = int(match.group(1))
+        else:
+            raise ValueError(f"Could not extract document ID from URL: {document_url}")
+            
         safe_title = self._sanitize_filename(title)
         self._download_document(document_id, safe_title, self.temp_dir)
         return self.downloaded_files

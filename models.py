@@ -29,29 +29,9 @@ class ApiKeyResponse(BaseModel):
 class PaperlessWebhookPayload(BaseModel):
     """Webhook payload from Paperless NGX workflows."""
     
-    # Document information that's always available
-    document_id: Optional[int] = None
-    document_url: Optional[str] = None
-    title: Optional[str] = None
-    content: Optional[str] = None
-    tags: Optional[List[str]] = None
-    correspondent: Optional[str] = None
-    document_type: Optional[str] = None
-    
-    # Date fields
-    created: Optional[str] = None
-    added: Optional[str] = None
-    modified: Optional[str] = None
-    
-    # File information
-    original_filename: Optional[str] = None
-    filename: Optional[str] = None
-    
-    # Trigger type
-    trigger_type: Optional[str] = None  # 'added', 'updated', 'consumption_started'
-    
-    # Any additional fields from custom workflow placeholders
-    custom_fields: Optional[dict] = None
+    document_url: str = ""
+    filename: str = ""
+    original_filename: str = ""
 
 
 

@@ -1,5 +1,5 @@
 from fastapi import HTTPException, Security, status, Depends
-from fastapi.security import APIKeyQuery, APIKeyHeader
+from fastapi.security import APIKeyQuery, APIKeyHeader, HTTPBearer
 from sqlmodel import Session, select
 from datetime import datetime, timezone
 from typing import Optional
@@ -15,6 +15,8 @@ db = Database()
 
 api_key_query = APIKeyQuery(name="api-key", auto_error=False)
 api_key_header = APIKeyHeader(name="x-api-key", auto_error=False)
+# OpenAI-compatible Bearer token authentication
+bearer_auth = HTTPBearer(auto_error=False)
 
 
 def get_db_session():
@@ -44,13 +46,15 @@ def validate_api_key(key: str, session: Session) -> Optional[ApiKey]:
 def get_api_key(
     api_key_query: str = Security(api_key_query),
     api_key_header: str = Security(api_key_header),
+    bearer_token = Security(bearer_auth),
     session: Session = Depends(get_db_session),
 ) -> str:
-    """Retrieve and validate an API key from the query parameters or HTTP header.
+    """Retrieve and validate an API key from the query parameters, HTTP header, or Bearer token.
 
     Args:
         api_key_query: The API key passed as a query parameter.
         api_key_header: The API key passed in the HTTP header.
+        bearer_token: The Bearer token from Authorization header (OpenAI compatible).
         session: Database session.
 
     Returns:
@@ -59,7 +63,13 @@ def get_api_key(
     Raises:
         HTTPException: If the API key is invalid or missing.
     """
-    # Try query parameter first
+    # Try Bearer token first (OpenAI compatible)
+    if bearer_token and bearer_token.credentials:
+        api_key = validate_api_key(bearer_token.credentials, session)
+        if api_key:
+            return bearer_token.credentials
+    
+    # Try query parameter
     if api_key_query:
         api_key = validate_api_key(api_key_query, session)
         if api_key:
